@@ -1,0 +1,55 @@
+name: 🐛 Bug report
+description: Something in the extension or in this codebase does not work
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did it happen?
+      options:
+        - Extension (popup, content script, background)
+        - Website (apps/web)
+        - Build, dev server, or tooling
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you got, and what you expected instead. If nothing visibly happened, say that too.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The page you were on, or the command you ran. Mention it if the bug only shows up after reloading the extension or on a fresh profile.
+      placeholder: |
+        1. pnpm dev:ext, load the unpacked build from apps/extension/.output/
+        2. Open https://...
+        3. Click ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output
+      description: "Paste it verbatim. Popup: right click the icon and Inspect popup. Content script: the page devtools console. Background: `chrome://extensions` or `about:debugging`. Build: your terminal."
+      render: text
+    validations:
+      required: false
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: |
+        Only what applies to your case, on one line.
+        - **Extension version**: Chrome and Edge show it on the card at `chrome://extensions` once Developer mode is on. Firefox shows it at `about:addons`, or at `about:debugging#/runtime/this-firefox` for a temporary install.
+        - **Built from source?** Give the commit (`git rev-parse --short HEAD`) rather than the version.
+        - **Browser version**: `chrome://version` or `about:support`, the first line is enough.
+        - **Build or dev server issues**: your `node -v` and `pnpm -v` output. This repo needs Node 22.13.0 or newer.
+      placeholder: Chrome 142, built from 856f0bf, node v22.13.0
+    validations:
+      required: false
