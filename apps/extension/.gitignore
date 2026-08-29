@@ -1,0 +1,12 @@
+# WXT generated
+.wxt/
+
+# Build outputs
+.output/
+
+# Bundle analysis
+stats.html
+stats-*.json
+
+# Local browser config (personal paths)
+web-ext.config.ts
