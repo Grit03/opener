@@ -23,10 +23,10 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
-    "eslint": "^9.39.5",
+    "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.68.0",
+    "typescript-eslint": "^8.69.0",
     "web-ext": "^10.5.0",
     "wxt": "^0.21.3"
   }
