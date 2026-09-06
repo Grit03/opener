@@ -4,7 +4,6 @@
     "apps/extension": {
       "release-type": "node",
       "package-name": "@opener/extension",
-      "include-component-in-tag": false,
       "bump-minor-pre-major": true
     }
   }
