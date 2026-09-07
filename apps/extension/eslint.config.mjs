@@ -29,6 +29,9 @@ export default defineConfig([
         "warn",
         { argsIgnorePattern: "^_" },
       ],
+      "no-restricted-imports": ["error", {
+        paths: [{ name: "#imports", message: "실제 경로로 import 하세요. 목록은 .wxt/types/imports-module.d.ts" }],
+      }],
     },
   },
 ]);
