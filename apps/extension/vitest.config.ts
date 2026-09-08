@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname),
-      "wxt/browser": path.resolve(import.meta.dirname, "tests/mock-browser.ts"),
+      "wxt/browser": path.resolve(import.meta.dirname),
     },
   },
   test: {
