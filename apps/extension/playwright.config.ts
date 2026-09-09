@@ -78,7 +78,7 @@ export default defineConfig({
   // },
 
   webServer: {
-    command: "pnpm exec serve e2e/pages -l tcp://localhost:4173 --no-clipboard",
+    command: "pnpm exec serve e2e -l tcp://localhost:4173 --no-clipboard",
     url: "http://localhost:4173",
     // 소개 사이트 개발 서버와 분리하고, 항상 이 테스트의 HTML을 제공한다.
     reuseExistingServer: false,
