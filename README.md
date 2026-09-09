@@ -121,3 +121,5 @@ pnpm --filter @opener/extension exec playwright install chromium # 최초 한 �
 pnpm test:e2e
 pnpm test:e2e --headed # 브라우저 창을 보면서 실행
 ```
+
+- 확장 흐름 검사: 현재는 실제 native messaging 연결은 검증하지 않습니다.
