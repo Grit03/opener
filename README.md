@@ -103,14 +103,18 @@ packages/        native-host, protocol 패키지를 추가할 예정
 
 ## 개발
 
-Node.js 22와 pnpm이 필요합니다.
+개발과 CI는 `.nvmrc`에 고정한 Node.js 22 버전을 사용합니다. pnpm 버전은 `package.json`의 `packageManager`를 따릅니다.
 
 ```bash
+nvm install        # .nvmrc의 버전 설치 (이미 설치되어 있으면 재사용)
+nvm use
 pnpm install
 pnpm dev:ext        # 확장 개발 서버
 pnpm dev:web        # 웹 개발 서버
 pnpm test           # Chromium에서 Vitest 테스트 실행
 ```
+
+디렉터리 진입 시 Node 버전을 자동으로 전환하려면 [nvm의 zsh 자동 전환 설정](https://github.com/nvm-sh/nvm#zsh)을 사용합니다.
 
 DOM 테스트는 jsdom 대신 실제 Chromium에서 실행합니다. 번역할 요소를 찾는 기능은 요소의 스타일과 화면 내 위치에 의존하므로, `getComputedStyle`과 `IntersectionObserver`를 실제 브라우저 환경에서 검증할 수 있어야 합니다.
 
