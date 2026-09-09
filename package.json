@@ -15,7 +15,7 @@
     "runtime": {
       "name": "node",
       "version": "22.23.2",
-      "onFail": "download"
+      "onFail": "error"
     }
   },
   "devDependencies": {
