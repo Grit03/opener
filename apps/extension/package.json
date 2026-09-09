@@ -12,6 +12,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
+    "test:e2e": "pnpm run build && playwright test",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
