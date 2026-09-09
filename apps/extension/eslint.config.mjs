@@ -34,4 +34,13 @@ export default defineConfig([
       }],
     },
   },
+  // Playwright fixture 파일. `({}, use)`는 Playwright가 요구하는 형식이고,
+  // `use`는 React 훅이 아니라 Playwright 콜백이다.
+  {
+    files: ["e2e/**/*.ts"],
+    rules: {
+      "no-empty-pattern": "off",
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ]);

@@ -10,3 +10,11 @@ stats-*.json
 
 # Local browser config (personal paths)
 web-ext.config.ts
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
