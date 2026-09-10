@@ -116,6 +116,18 @@ pnpm test           # Chromium에서 Vitest 테스트 실행
 
 디렉터리 진입 시 Node 버전을 자동으로 전환하려면 [nvm의 zsh 자동 전환 설정](https://github.com/nvm-sh/nvm#zsh)을 사용합니다.
 
+### 커밋·푸시 전 검사
+
+`pnpm install` 시 Lefthook이 Git 훅을 설치합니다.
+
+- 커밋 전: 스테이징한 파일의 Prettier 검사와 앱별 JS·TS 파일의 ESLint 검사를 병렬 실행합니다.
+- 커밋 메시지: Conventional Commits 형식을 검사합니다. 예: `feat: 번역 기능 추가`, `fix(extension): 팝업 오류 수정`, `chore: 의존성 업데이트`.
+- 푸시 전: `pnpm typecheck`로 웹과 확장 프로그램의 타입을 검사합니다.
+
+검사 실패 시 내용을 수정한 뒤 다시 커밋하거나 푸시합니다. 포맷은 `pnpm format`, 린트 자동 수정은 `pnpm lint:fix`로 실행할 수 있습니다.
+
+### 브라우저 테스트
+
 DOM 테스트는 jsdom 대신 실제 Chromium에서 실행합니다. 번역할 요소를 찾는 기능은 요소의 스타일과 화면 내 위치에 의존하므로, `getComputedStyle`과 `IntersectionObserver`를 실제 브라우저 환경에서 검증할 수 있어야 합니다.
 
 E2E 테스트는 확장을 빌드한 뒤 테스트용 HTML 서버와 확장이 설치된 Chromium을 실행합니다. 테스트가 끝나면 서버와 브라우저도 종료합니다.
