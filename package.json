@@ -6,7 +6,7 @@
     "dev:ext": "pnpm --filter @opener/extension dev",
     "dev:web": "pnpm --filter @opener/web dev",
     "build": "pnpm -r build",
-    "compile": "pnpm -r compile",
+    "typecheck": "pnpm -r run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "pnpm -r run lint",
