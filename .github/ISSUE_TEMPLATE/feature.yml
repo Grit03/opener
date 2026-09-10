@@ -1,47 +1,47 @@
 name: ✨ Feature request
 description: A new feature, a change to how something works today, or a refactor
-title: '[Feature] '
-labels: ['enhancement']
+title: "[Feature] "
+labels: ["enhancement"]
 body:
-    - type: dropdown
-      id: scope
-      attributes:
-          label: What is this about?
-          options:
-              - Extension behavior (popup, content script, background)
-              - Website (apps/web)
-              - Repo, build, or tooling (WXT config, lint, types, scripts)
-              - Not sure
-      validations:
-          required: true
-    - type: dropdown
-      id: kind
-      attributes:
-          label: What kind of change?
-          options:
-              - New feature
-              - Change to existing behavior
-              - Refactor
-      validations:
-          required: true
-    - type: textarea
-      id: proposal
-      attributes:
-          label: What are you proposing?
-          description: The behavior you have in mind. A rough sketch is fine, and pointing at the files you would touch helps.
-      validations:
-          required: true
-    - type: textarea
-      id: why
-      attributes:
-          label: Why do you want this?
-          description: What it buys you. For a change or a refactor, say what happens today and why that is worth changing.
-      validations:
-          required: false
-    - type: textarea
-      id: refs
-      attributes:
-          label: References
-          description: Another extension that does this well, a screenshot, docs, or a related issue.
-      validations:
-          required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: What is this about?
+      options:
+        - Extension behavior (popup, content script, background)
+        - Website (apps/web)
+        - Repo, build, or tooling (WXT config, lint, types, scripts)
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change?
+      options:
+        - New feature
+        - Change to existing behavior
+        - Refactor
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What are you proposing?
+      description: The behavior you have in mind. A rough sketch is fine, and pointing at the files you would touch helps.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why do you want this?
+      description: What it buys you. For a change or a refactor, say what happens today and why that is worth changing.
+    validations:
+      required: false
+  - type: textarea
+    id: refs
+    attributes:
+      label: References
+      description: Another extension that does this well, a screenshot, docs, or a related issue.
+    validations:
+      required: false

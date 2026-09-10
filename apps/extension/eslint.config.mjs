@@ -26,13 +26,18 @@ export default defineConfig([
     rules: {
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_" },
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "#imports",
+              message: "실제 경로로 import 하세요. 목록은 .wxt/types/imports-module.d.ts",
+            },
+          ],
+        },
       ],
-      "no-restricted-imports": ["error", {
-        paths: [{ name: "#imports", message: "실제 경로로 import 하세요. 목록은 .wxt/types/imports-module.d.ts" }],
-      }],
     },
   },
   // Playwright fixture 파일. `({}, use)`는 Playwright가 요구하는 형식이고,
@@ -44,5 +49,5 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "off",
     },
   },
-  eslintConfigPrettier
+  eslintConfigPrettier,
 ]);
