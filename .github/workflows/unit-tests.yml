@@ -1,17 +1,14 @@
-name: Vitest Tests
+name: Unit Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit Tests
     timeout-minutes: 15
     runs-on: ubuntu-latest
 

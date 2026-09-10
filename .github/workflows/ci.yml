@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/checks.yml
+
+  build:
+    name: Build
+    needs: checks
+    uses: ./.github/workflows/build.yml
+
+  unit-tests:
+    name: Unit Tests
+    needs: checks
+    uses: ./.github/workflows/unit-tests.yml
+
+  e2e:
+    name: E2E Tests
+    needs: checks
+    uses: ./.github/workflows/e2e.yml
