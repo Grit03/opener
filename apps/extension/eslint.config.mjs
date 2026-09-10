@@ -3,6 +3,7 @@ import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
+import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default defineConfig([
   globalIgnores([".wxt/**", ".output/**", "web-ext.config.ts"]),
@@ -43,4 +44,5 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  eslintConfigPrettier
 ]);

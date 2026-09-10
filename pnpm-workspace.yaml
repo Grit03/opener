@@ -11,3 +11,4 @@ allowBuilds:
 catalog:
   typescript: ^6.0.3
   "@types/node": ^22
+  eslint-config-prettier: ^10.1.8
