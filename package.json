@@ -7,6 +7,10 @@
     "dev:web": "pnpm --filter @opener/web dev",
     "build": "pnpm -r build",
     "compile": "pnpm -r compile",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
     "test": "vitest run",
     "test:e2e": "pnpm --filter @opener/extension test:e2e"
   },
