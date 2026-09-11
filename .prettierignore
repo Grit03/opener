@@ -22,3 +22,8 @@ pnpm-lock.yaml
 
 # Local browser configuration
 apps/extension/web-ext.config.ts
+
+# Spec Kit 생성 파일의 원본 형식 유지
+.specify/
+.agents/skills/speckit-*/
+.claude/skills/speckit-*/
