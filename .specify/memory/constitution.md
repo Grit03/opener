@@ -1,50 +1,35 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Opener Constitution
 
-## Core Principles
+## 핵심 원칙
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 동작 단위 TDD
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+실행 결과가 달라지는 작업은 다음 순서를 지킨다.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+1. 요구사항을 보여주는 테스트를 먼저 작성한다.
+2. 테스트가 기대한 이유로 실패하는지 확인한다.
+3. 테스트를 통과시키는 최소한의 코드를 작성한다.
+4. 모든 테스트가 통과하는 상태에서만 리팩터링한다.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+`tasks.md`도 동작별로 **실패 테스트 → 구현 → 리팩터링** 순서를 유지해야 한다. 버그 수정은 문제를 재현하는 테스트부터 작성한다. 문서, 서식, 생성 파일처럼 실행 동작을 바꾸지 않는 작업은 테스트 선행 대상에서 제외할 수 있다.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. 실제 실행 환경 검증
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+DOM과 레이아웃에 의존하는 동작은 실제 Chromium 기반 Browser Mode에서 검증한다. 확장 주입, manifest, 탭 사이의 흐름은 통합이 필요한 시점에 Playwright로 검증한다. 단위 테스트로 검증할 수 있는 것은 단위 테스트로 검증하고, E2E 테스트는 최소한으로 한다. 또한 테스트 대역만으로 브라우저 동작을 확정하지 않는다.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. 작은 기능 범위
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+각 기능은 독립적으로 검토할 수 있는 최소 범위로 나눈다. 명세에 없는 후속 기능과 불필요한 의존성을 미리 만들지 않는다. 구현 중 범위가 달라지면 코드를 확장하기 전에 명세와 계획을 먼저 갱신한다.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## 개발 기준
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+- 기능 요구사항과 완료 조건을 테스트 사례에 연결한다.
+- 기존 구조와 브라우저 표준 기능을 우선 사용한다.
+- 타입 검사, 린트와 관련 테스트를 통과해야 작업을 완료할 수 있다.
+- `AGENTS.md`와 `CLAUDE.md`는 도구별 사용법을 보충할 수 있지만 이 원칙과 충돌해서는 안 된다.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+## 관리
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+이 문서는 프로젝트 전체의 개발 원칙이다. 원칙을 바꾸면 영향을 받는 명세, 계획과 작업 목록을 함께 검토한다. 필수 원칙을 완화하거나 호환되지 않게 바꾸면 주 버전을 올리고, 원칙을 추가하거나 구체화하면 부 버전을 올린다.
+
+**Version**: 1.0.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
