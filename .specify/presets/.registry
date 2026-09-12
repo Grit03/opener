@@ -40,6 +40,24 @@
         ]
       },
       "installed_at": "2026-09-11T08:29:55.516171+00:00"
+    },
+    "optional-research": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:3936efe1ca07c42dc63cad2b30b935ceea81d9f3d6273efacd01e856758bab2a",
+      "enabled": true,
+      "priority": 5,
+      "registered_commands": {
+        "codex": [
+          "speckit.plan"
+        ]
+      },
+      "registered_skills": {
+        "codex": [
+          "speckit-plan"
+        ]
+      },
+      "installed_at": "2026-09-12T06:07:52.058824+00:00"
     }
   }
 }
