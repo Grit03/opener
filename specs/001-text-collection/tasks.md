@@ -4,12 +4,12 @@
 
 ## 1단계: 준비
 
-- [ ] [T001] `apps/extension/utils/text-collection.ts`에 수집 결과 타입을 선언하고, `apps/extension/tests/text-collection.test.ts`에서 기존 DOM fixture 도구를 준비한다. 실행 동작은 아직 구현하지 않는다.
+- [x] [T001] `apps/extension/utils/text-collection.ts`에 수집 결과 타입을 선언하고, `apps/extension/tests/text-collection.test.ts`에서 기존 DOM fixture 도구를 준비한다. 실행 동작은 아직 구현하지 않는다.
 
 ## 2단계: 기반 동작 — 본문 선택과 탐색
 
-- [ ] [T002] [RED] `apps/extension/tests/text-collection.test.ts`에 `main → article → body` 선택 순서, 겹치지 않는 범위, 문서 순서, 반환 참조, 빈 글 제외, 반복 호출의 독립된 결과와 DOM 보존 테스트를 작성하고 기대한 이유로 실패하는지 확인한다. 테스트 실행에 필요한 빈 함수는 테스트 작성 후 추가한다. `(R1, R4, R9, R10, C2, C5, C6)`
-- [ ] [T003] [GREEN] `apps/extension/utils/text-collection.ts`에 상태를 저장하지 않는 본문 선택과 `TreeWalker` 탐색을 최소 구현해 T002를 통과시킨다.
+- [x] [T002] [RED] `apps/extension/tests/text-collection.test.ts`에 `main → article → body` 선택 순서, 겹치지 않는 범위, 문서 순서, 반환 참조, 빈 글 제외, 반복 호출의 독립된 결과와 DOM 보존 테스트를 작성하고 기대한 이유로 실패하는지 확인한다. 테스트 실행에 필요한 빈 함수는 테스트 작성 후 추가한다. `(R1, R4, R9, R10, C2, C5, C6)`
+- [x] [T003] [GREEN] `apps/extension/utils/text-collection.ts`에 상태를 저장하지 않는 본문 선택과 `TreeWalker` 탐색을 최소 구현해 T002를 통과시킨다.
 
 ## 3단계: 사용자 이야기 1 — 읽기 단위로 묶기
 
