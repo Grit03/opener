@@ -26,6 +26,11 @@ Node는 `.nvmrc`, pnpm은 `package.json`의 `packageManager` 버전을 사용한
 
 TypeScript와 ES 모듈을 사용한다. Prettier 기준은 공백 2칸, 세미콜론, 큰따옴표, 후행 쉼표, 줄 너비 100이다. 컴포넌트는 PascalCase, 함수는 camelCase, 유틸리티 파일은 kebab-case로 작성한다. 확장은 명시적 import를 사용하며 WXT 자동 import와 `#imports`는 사용하지 않는다. Promise는 ESLint 규칙에 맞게 처리한다.
 
+### 타입스크립트
+
+- Non-null 단언 연산자를 지양한다.
+- 타입 단언을 지양한다. 실제로 확인해서 타입을 좁히는 방법을 사용한다.
+
 ## 테스트
 
 동작 변경은 **실패 테스트 확인 → 최소 구현 → 통과 후 리팩터링** 순서를 따른다. 문서만 바꾸는 작업은 제외한다. 단위 테스트는 `tests/**/*.test.ts`, E2E는 `e2e/**/*.spec.ts`에 작성한다. DOM·레이아웃은 실제 Chromium에서 검증하고 E2E는 확장 통합 흐름에 집중한다. 커버리지 수치 기준은 없다. CI는 포맷·린트·타입·빌드·단위 테스트·E2E를 검사한다.
