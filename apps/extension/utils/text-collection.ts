@@ -47,3 +47,26 @@ function collectTextWithin(root: Element): SourceText[] {
   }
   return result;
 }
+
+// --------------------------------------------------------------------------------
+// 레이아웃
+// --------------------------------------------------------------------------------
+
+const INLINE_LEVEL = new Set([
+  "inline",
+  "inline-block",
+  "inline-flex",
+  "inline-grid",
+  "inline-table",
+  "contents",
+  "ruby",
+  "ruby-base",
+  "ruby-text",
+]);
+
+/** 계산된 display가 인라인 배치나 contents 목록에 없으면 블록으로 취급한다. */
+function isBlock(el: Element): boolean {
+  const display = getComputedStyle(el).display;
+  if (display === "") return false;
+  return !INLINE_LEVEL.has(display);
+}
