@@ -49,5 +49,11 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  {
+    files: ["tests/**/*.{ts,tsx}", "e2e/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
   eslintConfigPrettier,
 ]);
