@@ -37,10 +37,10 @@
 
 - 문서 정보와 실행 코드
 - 입력 요소와 편집 가능한 영역
-- `translate` 값이 `false`인 영역
 - `pre`와 블록으로 표시되는 `code`
 - 프레임, 임베드, 그래픽과 미디어 콘텐츠
-- 실제로 표시되지 않는 영역
+
+`translate`, 언어와 표시 여부는 텍스트별로 판단한다. `translate="yes"`와 `visibility: visible`처럼 자식에서 상태가 바뀔 수 있으므로 부모만 보고 하위 탐색을 중단하지 않는다.
 
 숨김 여부는 `display: contents`가 아닌 가장 가까운 요소의 `checkVisibility()`로 먼저 확인한다. `opacity`와 `visibility`도 함께 검사한다. `content-visibility: auto`로 화면 밖 렌더링이 생략된 경우는 제외하지 않는다. 남은 텍스트는 `Range`의 실제 크기를 보조 조건으로 확인한다.
 
