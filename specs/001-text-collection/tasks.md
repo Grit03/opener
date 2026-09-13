@@ -18,7 +18,7 @@
 ## 3단계: 글을 묶고 나누기
 
 - [x] [T004] [RED] `apps/extension/tests/text-collection.test.ts`: 제목·문단·목록·용어 설명·표·`br`로 글을 나누고, 링크·강조·인라인 코드와 공백을 함께 묶는지 검증한다. 중첩·빈 요소와 CSS 배치에 따른 분리도 확인한다. `(R2, R3, C1, C2)`
-- [ ] [T005] [GREEN] `apps/extension/utils/text-collection.ts`: 글 묶기와 분리를 구현한다. `isBlock`은 T004에서 잘못된 동작이 확인될 때만 수정한다.
+- [x] [T005] [GREEN] `apps/extension/utils/text-collection.ts`: 글 묶기와 분리를 구현한다. `isBlock`은 T004에서 잘못된 동작이 확인될 때만 수정한다.
 
 ## 4단계: 번역하지 않을 글 제외하기
 
