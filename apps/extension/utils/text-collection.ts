@@ -1,80 +1,128 @@
+// 페이지에서 번역할 글을 모은다. 이 파일에서 쓰는 용어는 다음과 같다.
+//
+// - 본문 영역(contentArea): 글을 모을 범위가 되는 요소. main에서 모은 글이 없으면 article을,
+//   그래도 없으면 body를 쓴다. 같은 태그가 여러 개면 모두 쓰고, 중첩되면 바깥쪽만 쓴다.
+// - 경계 요소: 앞뒤 글을 나누는 요소. h1~h6·p·li·dt·dd·caption·th·td·br은 CSS와 관계없이
+//   경계 요소이고, 그 밖의 요소는 계산된 display가 인라인 계열이 아닐 때 경계 요소다.
+// - 기준 요소(anchor): 텍스트 노드에서 부모 방향으로 올라가며 처음 만나는 경계 요소. 본문 영역에
+//   닿을 때까지 경계 요소가 없으면 본문 영역이 기준 요소다.
+// - 글: 기준 요소가 같고 사이에 경계 요소가 없는 텍스트 노드들을 이어 붙인 것. SourceText 하나가
+//   글 하나다.
+//
+// 예) <main>Intro<p>Hello <a>world</a>!</p></main>
+//
+//   main               ← 본문 영역
+//   ├─ "Intro"         → 글 1
+//   └─ p               ← 경계 요소
+//      ├─ "Hello "     → 글 2
+//      ├─ a            ← 인라인이라 글을 나누지 않는다
+//      │  └─ "world"   → 글 2
+//      └─ "!"          → 글 2
+//
+//   결과: "Intro"(기준 요소 main), "Hello world!"(기준 요소 p)
+
 export interface SourceText {
   text: string;
   anchor: Element;
   sourceNodes: Text[];
 }
 
+const CONTENT_AREA_TAGS = ["main", "article"];
+
 /**
- * 번역할 텍스트들이 모여있고, 페이지의 본문이라 취급될만한 DOM을 찾는다.
- * main에서 수집한 글이 없으면 article, body 순으로 수집 범위를 넓힌다.
+ * 본문 영역에서 번역할 글을 모아 문서 순서대로 반환한다.
+ * 본문 영역은 main, article, body 순으로 시도하고, 앞 후보에서 모은 글이 없을 때만 다음으로 넘어간다.
  */
 export function collectTextForTranslation(doc: Document = document): SourceText[] {
   if (!doc.body) return [];
 
-  for (const tag of ["main", "article"]) {
-    // 같은 태그가 중첩돼 있을 때 바깥쪽만 남긴다.
-    const roots = [...doc.body.querySelectorAll(tag)].filter(
-      (element) => !element.parentElement?.closest(tag),
-    );
-    const result = roots.flatMap(collectTextWithin);
-    if (result.length > 0) return result;
+  for (const tag of CONTENT_AREA_TAGS) {
+    // 이 태그의 요소를 모두 본문 영역으로 쓰되, 같은 태그 안에 중첩된 요소는 뺀다.
+    // 중첩된 요소까지 쓰면 바깥 요소를 훑을 때 이미 모은 글을 한 번 더 모은다.
+    const contentAreas = findOutermost(doc.body, tag);
+    const collected = contentAreas.flatMap(collectTextWithin);
+    if (collected.length > 0) return collected;
   }
   return collectTextWithin(doc.body);
 }
 
+/** container 안의 tag 요소 중 같은 태그의 조상이 없는 것만 문서 순서대로 반환한다. */
+function findOutermost(container: Element, tag: string): Element[] {
+  const matched = [...container.querySelectorAll(tag)];
+  return matched.filter((element) => !element.parentElement?.closest(tag));
+}
+
 /**
- * 주어진 본문 안에서 이어지는 글을 묶고, 문단·줄바꿈·블록 배치에 따라 나눈다.
- * 각 글에 기준 요소와 문서 순서대로 모은 원본 텍스트 노드를 담는다.
+ * 본문 영역 안의 텍스트 노드를 문서 순서대로 훑으며 글로 묶는다.
+ * 경계 요소가 시작되거나 기준 요소가 바뀌면, 그때까지 모은 텍스트 노드를 글 하나로 확정한다.
  */
-function collectTextWithin(root: Element): SourceText[] {
-  const result: SourceText[] = [];
-  const walker = root.ownerDocument.createTreeWalker(
-    root,
+function collectTextWithin(contentArea: Element): SourceText[] {
+  const collected: SourceText[] = [];
+  let pendingAnchor: Element = contentArea;
+  let pendingNodes: Text[] = [];
+
+  /** 모은 텍스트 노드를 글 하나로 확정하고 비운다. 공백뿐인 글은 결과에 넣지 않는다. */
+  const finishPendingText = () => {
+    const sourceText = createSourceText(pendingAnchor, pendingNodes);
+    if (sourceText) collected.push(sourceText);
+    pendingNodes = [];
+  };
+
+  // TreeWalker는 노드를 문서 순서(전위 순회)로 한 번씩 방문한다. 요소는 자손보다 먼저 방문되고,
+  // 요소가 끝나는 시점(닫는 태그)은 방문되지 않는다. 그래서 요소를 만난 때는 늘 그 요소의 시작이다.
+  for (const node of walkElementsAndTexts(contentArea)) {
+    if (node instanceof Element) {
+      // 경계 요소가 시작되면 앞에서 모은 글을 확정한다. br이나 빈 p처럼 안에 텍스트가 없는
+      // 경계 요소는 기준 요소를 바꾸지 않으므로, 이 분기에서만 앞뒤 글을 나눌 수 있다.
+      if (isTextBoundary(node)) finishPendingText();
+      continue;
+    }
+
+    // 이 텍스트 노드의 기준 요소
+    const textAnchor = findAnchor(node, contentArea);
+    // 기준 요소가 바뀌면 앞 글을 확정한다. 경계 요소가 시작될 때는 위 분기에서 이미 확정했으므로,
+    // 실제로 필요한 경우는 경계 요소가 끝나고 바깥 글로 돌아왔을 때다. 예: li 안의 p가 끝난 뒤
+    // 이어지는 li의 글. 끝나는 시점은 방문되지 않으니 기준 요소가 달라진 것으로 알아챈다.
+    if (textAnchor !== pendingAnchor) finishPendingText();
+
+    pendingAnchor = textAnchor;
+    pendingNodes.push(node);
+  }
+
+  // 마지막 글은 뒤따르는 경계 요소나 기준 요소 변화가 없어 아직 확정되지 않았으므로 여기서 확정한다.
+  finishPendingText();
+  return collected;
+}
+
+/** 본문 영역 안의 요소와 텍스트 노드를 문서 순서대로 내놓는다. 본문 영역 자신은 내놓지 않는다. */
+function* walkElementsAndTexts(contentArea: Element): Generator<Element | Text> {
+  const walker = contentArea.ownerDocument.createTreeWalker(
+    contentArea,
     NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
   );
-  let recentAnchor = root;
-  let group: Text[] = [];
 
   while (walker.nextNode() !== null) {
     const node = walker.currentNode;
-
-    if (node instanceof Element) {
-      if (!isTextBoundary(node)) continue;
-
-      // 문단이나 br을 만나면, 그 앞까지 모은 글을 저장한다. 빈 요소도 글을 나눈다.
-      const sourceText = createSourceText(recentAnchor, group);
-      if (sourceText) result.push(sourceText);
-      group = [];
-      continue;
-    }
-    if (!(node instanceof Text)) continue;
-
-    // 인라인 부모를 지나 기준 요소를 찾되, 본문 범위 밖으로는 올라가지 않는다.
-    let parentNode = node.parentElement;
-    while (parentNode && parentNode !== root && !isTextBoundary(parentNode)) {
-      parentNode = parentNode.parentElement;
-    }
-    const anchor = parentNode ?? root;
-
-    // 안쪽 문단에서 바깥 글로 돌아온 경우에도 이전 묶음을 마무리한다.
-    if (anchor !== recentAnchor) {
-      const sourceText = createSourceText(recentAnchor, group);
-      if (sourceText) result.push(sourceText);
-      group = [];
-    }
-    recentAnchor = anchor;
-    group.push(node);
+    if (node instanceof Element || node instanceof Text) yield node;
   }
+}
 
-  // 마지막 글 뒤에는 다음 요소가 없으므로 탐색이 끝난 뒤 한 번 더 저장한다.
-  const sourceText = createSourceText(recentAnchor, group);
-  if (sourceText) result.push(sourceText);
-  return result;
+/**
+ * 텍스트 노드의 기준 요소를 찾는다. 부모 방향으로 올라가며 경계 요소가 아닌 요소(a·em·span 등)는
+ * 지나치고, 처음 만나는 경계 요소를 반환한다. 본문 영역에 닿을 때까지 없으면 본문 영역을 반환한다.
+ */
+function findAnchor(text: Text, contentArea: Element): Element {
+  let candidate = text.parentElement;
+  while (candidate !== null && candidate !== contentArea && !isTextBoundary(candidate)) {
+    candidate = candidate.parentElement;
+  }
+  return candidate ?? contentArea;
 }
 
 /** 원본 노드의 글을 합쳐 수집 결과를 만들고, 공백뿐이면 null을 반환한다. */
 function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | null {
-  // 원문을 먼저 합친 뒤 연속된 공백·탭·줄바꿈과 앞뒤 공백을 정리한다.
+  // 노드 경계에 걸친 공백도 하나로 합쳐지도록 먼저 이어 붙인다. 그다음 연속된 공백 문자
+  // (\s: 스페이스·탭·줄바꿈·NBSP 등)를 스페이스 하나로 바꾸고 앞뒤 공백을 없앤다.
   const text = sourceNodes
     .map((node) => node.data)
     .join("")
@@ -84,10 +132,11 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
   return text ? { text, anchor, sourceNodes } : null;
 }
 
-// // --------------------------------------------------------------------------------
-// // 레이아웃
-// // --------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+// 경계 요소 판정
+// --------------------------------------------------------------------------------
 
+/** CSS display와 관계없이 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다. */
 const TEXT_BOUNDARY_TAGS = new Set([
   "H1",
   "H2",
@@ -105,6 +154,10 @@ const TEXT_BOUNDARY_TAGS = new Set([
   "BR",
 ]);
 
+/**
+ * 앞뒤 글을 나누지 않는 display 값. contents는 인라인 계열은 아니지만 자기 상자를 만들지 않아
+ * 자식이 부모의 흐름에 그대로 놓이므로 함께 둔다.
+ */
 const INLINE_LEVEL = new Set([
   "inline",
   "inline-block",
@@ -117,14 +170,18 @@ const INLINE_LEVEL = new Set([
   "ruby-text",
 ]);
 
-/** 제목·문단·목록·표의 구분 요소이거나(인라인이어도) 블록 배치이면 주변 글과 나눈다. */
+/** 경계 요소인지 판단한다. TEXT_BOUNDARY_TAGS는 CSS와 관계없이, 그 밖의 요소는 블록일 때만 경계다. */
 function isTextBoundary(element: Element): boolean {
   return TEXT_BOUNDARY_TAGS.has(element.tagName) || isBlock(element);
 }
 
-/** 계산된 display가 인라인 배치나 contents 목록에 없으면 블록으로 취급한다. */
-function isBlock(el: Element): boolean {
-  const display = getComputedStyle(el).display;
+/**
+ * 계산된 display가 INLINE_LEVEL에 없으면 블록으로 본다. none도 블록으로 보며, 표시 여부는 여기서
+ * 판단하지 않는다. 계산된 값이 비어 있으면(문서에 붙지 않은 요소처럼 스타일이 계산되지 않은 경우)
+ * 블록으로 보지 않는다.
+ */
+function isBlock(element: Element): boolean {
+  const display = getComputedStyle(element).display;
   if (display === "") return false;
   return !INLINE_LEVEL.has(display);
 }
