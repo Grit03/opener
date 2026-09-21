@@ -78,6 +78,9 @@ function collectTextWithin(contentArea: Element): SourceText[] {
       continue;
     }
 
+    // 번역하지 않을 글은 모으지 않는다. 기준 요소도 갱신하지 않으므로 앞뒤 글은 그대로 이어진다.
+    if (!isTranslatable(node)) continue;
+
     // 이 텍스트 노드의 기준 요소
     const textAnchor = findAnchor(node, contentArea);
     // 기준 요소가 바뀌면 앞 글을 확정한다. 경계 요소가 시작될 때는 위 분기에서 이미 확정했으므로,
@@ -184,4 +187,59 @@ function isBlock(element: Element): boolean {
   const display = getComputedStyle(element).display;
   if (display === "") return false;
   return !INLINE_LEVEL.has(display);
+}
+
+// --------------------------------------------------------------------------------
+// 번역 제외 판정
+// --------------------------------------------------------------------------------
+
+/**
+ * 안의 글을 번역하지 않는 요소. 자손이 translate="yes"나 contenteditable="false"로 바꿔도
+ * 다시 넣지 않는다.
+ */
+const EXCLUDED_SELECTOR = [
+  // 문서 정보·실행 코드
+  "title",
+  "script",
+  "style",
+  "noscript",
+  "template",
+  // 입력·조작 요소
+  "textarea",
+  "select",
+  "datalist",
+  "button",
+  // 편집 영역. 값이 비어 있어도 편집 가능하다.
+  '[contenteditable=""]',
+  '[contenteditable="true" i]',
+  '[contenteditable="plaintext-only" i]',
+  // 서식을 지켜야 하는 글
+  "pre",
+  // 별도 문서·그래픽·미디어의 대체 콘텐츠
+  "iframe",
+  "object",
+  "svg",
+  "math",
+  "canvas",
+  "audio",
+  "video",
+].join(", ");
+
+/** 텍스트 노드를 번역할 글에 넣을지 판단한다. 본문 영역 바깥 조상의 설정도 따른다. */
+function isTranslatable(text: Text): boolean {
+  const parent = text.parentElement;
+  if (parent === null || isInExcludedElement(parent)) return false;
+
+  // HTMLElement.translate는 가장 가까운 유효한 translate 값을 상속해 계산한다.
+  // 대소문자를 가리지 않고, 잘못된 값은 무시하고 부모 값을 따른다.
+  return !(parent instanceof HTMLElement) || parent.translate;
+}
+
+/** 요소 자신이나 조상이 번역하지 않는 요소인지 확인한다. code는 블록으로 배치될 때만 제외한다. */
+function isInExcludedElement(element: Element): boolean {
+  for (let current: Element | null = element; current !== null; current = current.parentElement) {
+    if (current.matches(EXCLUDED_SELECTOR)) return true;
+    if (current.tagName === "CODE" && isBlock(current)) return true;
+  }
+  return false;
 }
