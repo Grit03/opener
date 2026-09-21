@@ -278,6 +278,172 @@ describe("CSS 배치로 나누기", () => {
   );
 });
 
+describe("번역하지 않을 영역 제외", () => {
+  // R7·C3: 문서 정보·실행 코드는 CSS로 표시해도 본문에 포함하지 않음
+  it.each([
+    ["title", `<title style="display:block">Document title</title>`],
+    ["script", `<script type="application/json" style="display:block">{"key":"value"}</script>`],
+    ["style", `<style style="display:block">.fixture-unused { color: red; }</style>`],
+    ["noscript", `<noscript>Fallback content</noscript>`],
+    ["template", `<template><p>Template content</p></template>`],
+  ])("%s의 내용을 제외한다", (_tag, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R5·C3: 입력값·선택지·버튼 문구는 번역할 본문에서 제외
+  it.each([
+    ["input", `<input value="Input value" placeholder="Input hint">`],
+    ["textarea", `<textarea>Textarea value</textarea>`],
+    ["select", `<select><optgroup label="Group"><option>Choice</option></optgroup></select>`],
+    ["datalist", `<datalist><option>Suggestion</option></datalist>`],
+    ["button", `<button><span>Submit</span></button>`],
+  ])("%s 입력 요소의 내용을 제외한다", (_tag, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R5·C3: 편집 가능한 영역 전체를 제외하고, 내부 재지정으로도 수집하지 않음
+  it.each(["true", "", "plaintext-only"])(
+    'contenteditable="%s" 영역과 그 자손을 제외한다',
+    (value) => {
+      mount(`
+        <main><p>Before</p><div contenteditable="${value}">
+          Editable <span>inherited text</span>
+          <p contenteditable="false" translate="yes">Editor content</p>
+        </div><p>After</p></main>
+      `);
+
+      const result = collectTextForTranslation(document);
+
+      expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+    },
+  );
+
+  // R5: 편집 영역 밖의 명시적인 false는 일반 본문으로 수집
+  it("contenteditable=false인 일반 본문은 유지한다", () => {
+    mount(`<main><p contenteditable="false">Read only <em>text</em></p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Read only text"]);
+  });
+
+  // R7·C3: pre는 표시 방식과 무관하게, code는 블록 배치일 때 자손까지 제외
+  it.each([
+    ["pre", `<pre style="display:inline">Preformatted <code>code</code></pre>`],
+    ["block code", `<code style="display:block">Block <span translate="yes">code</span></code>`],
+    ["flex code", `<code style="display:flex"><span>Flex code</span></code>`],
+    ["grid code", `<code style="display:grid"><span>Grid code</span></code>`],
+    ["flow-root code", `<code style="display:flow-root">Flow root code</code>`],
+  ])("%s의 내용을 제외한다", (_label, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R7·C3: 별도 문서·그래픽·미디어의 대체 텍스트와 자손도 제외
+  it.each([
+    ["iframe", `<iframe>Frame fallback</iframe>`],
+    ["object", `<object><p translate="yes">Object fallback</p></object>`],
+    ["embed", `<embed type="application/octet-stream">`],
+    ["svg", `<svg><title>Graphic title</title><text>Graphic text</text></svg>`],
+    ["math", `<math><mtext>Formula text</mtext></math>`],
+    ["canvas", `<canvas><span>Canvas fallback</span></canvas>`],
+    ["audio", `<audio><span>Audio fallback</span></audio>`],
+    ["video", `<video><span>Video fallback</span></video>`],
+    ["img", `<img alt="Image description">`],
+  ])("%s 콘텐츠를 제외한다", (_tag, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R1·R5·R7: 후보 본문 자체나 그 조상이 제외 영역인 경우에도 적용
+  it.each([
+    `<main contenteditable="true"><p>Editable main</p></main>`,
+    `<div contenteditable="true"><main><p>Editable main</p></main></div>`,
+    `<pre><main><p>Code main</p></main></pre>`,
+    `<main><button>Only control</button><pre>Only code</pre></main>`,
+  ])("후보 본문이 제외할 내용뿐이면 article로 넘어간다: %s", (markup) => {
+    mount(`${markup}<article><p>Article text</p></article>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Article text"]);
+  });
+});
+
+describe("translate 상속과 재지정", () => {
+  // R6·C3: 가장 가까운 유효한 translate 값을 상속하고 대소문자는 구분하지 않음
+  it.each(["no", "NO"])("translate=%s와 값을 상속한 자손을 제외한다", (value) => {
+    mount(`
+      <main><p>Before</p><div translate="${value}">
+        Excluded <span>inherited text</span><span translate="invalid">Still excluded</span>
+      </div><p>After</p></main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R3·R6: 제외한 인라인 글의 노드가 결과에 섞이지 않고 나머지는 문장으로 유지
+  it("translate=no인 인라인 글을 제외하고 원본 노드 참조를 유지한다", () => {
+    mount(`<main><p>Hello <span translate="no">private </span>world!</p></main>`);
+    const paragraph = document.querySelector("p")!;
+
+    const result = collectTextForTranslation(document);
+
+    expect(result).toEqual([
+      {
+        text: "Hello world!",
+        anchor: paragraph,
+        sourceNodes: [paragraph.firstChild, paragraph.lastChild],
+      },
+    ]);
+  });
+
+  // R6: no인 부모에서도 자식의 yes·빈 값으로 번역을 다시 허용할 수 있음
+  it.each(["yes", "YES", ""])(
+    'translate=no 안에서 translate="%s"인 자식과 그 자손만 다시 수집한다',
+    (value) => {
+      mount(`
+        <main translate="no">Excluded before
+          <p translate="${value}">Allowed <em>text</em><span translate="no"> excluded</span></p>
+          Excluded after
+        </main>
+      `);
+
+      const result = collectTextForTranslation(document);
+
+      expect(result.map(({ text }) => text)).toEqual(["Allowed text"]);
+    },
+  );
+
+  // R1·R6: 본문 바깥 조상에서 상속한 번역 금지도 후보 선택에 반영
+  it("조상의 translate=no로 main에 수집할 글이 없으면 article로 넘어간다", () => {
+    mount(`
+      <div translate="no"><main><p>Excluded main</p></main></div>
+      <article><p>Article text</p></article>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Article text"]);
+  });
+});
+
 describe("원문 보존", () => {
   // R10·C6: 수집 중 원문 글·요소·링크를 변경하지 않음
   it("원문 DOM을 변경하지 않는다", () => {
