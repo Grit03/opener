@@ -444,6 +444,80 @@ describe("translate 상속과 재지정", () => {
   });
 });
 
+describe("화면에 보이지 않는 글 제외", () => {
+  // R8: 계산된 스타일로 보이지 않는 글은 자신과 조상 어느 쪽에서 숨겨도 제외
+  it.each([
+    ["hidden", `<p hidden>Hidden attribute</p>`],
+    ["조상의 display: none", `<div style="display:none"><p>Display none</p></div>`],
+    ["조상의 visibility: hidden", `<div style="visibility:hidden"><p>Invisible</p></div>`],
+    ["조상의 opacity: 0", `<div style="opacity:0"><p><span>Transparent</span></p></div>`],
+    ["content-visibility: hidden", `<div style="content-visibility:hidden"><p>Skipped</p></div>`],
+    [
+      "display: none 안의 contents",
+      `<div style="display:none"><span style="display:contents">Contents</span></div>`,
+    ],
+    [
+      "visibility: hidden인 contents",
+      `<span style="display:contents;visibility:hidden">Contents</span>`,
+    ],
+  ])("%s인 글을 제외한다", (_label, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // R8: hidden 속성이 아니라 CSS가 계산한 표시 여부를 따른다
+  it("CSS로 다시 표시한 hidden 요소의 글은 수집한다", () => {
+    mount(`<main><p hidden style="display:block">Shown again</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Shown again"]);
+  });
+
+  // R8: 닫힌 details는 summary만 보이고, 열린 details는 내용도 보인다
+  it.each([
+    ["닫힌", "", ["Summary"]],
+    ["열린", " open", ["Summary", "Details body"]],
+  ])("%s details에서 보이는 글만 수집한다", (_label, open, expected) => {
+    mount(`<main><details${open}><summary>Summary</summary><p>Details body</p></details></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(expected);
+  });
+
+  // R8: visibility는 상속되므로 자식이 visible로 다시 표시할 수 있다
+  it("visibility: hidden인 부모 안에서 visible인 자식의 글은 수집한다", () => {
+    mount(`
+      <main><div style="visibility:hidden">
+        Hidden parent
+        <p style="visibility:visible">Visible child</p>
+      </div></main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Visible child"]);
+  });
+
+  // R8: 화면 밖에서 렌더링을 건너뛴 content-visibility: auto의 글도 보이는 글로 본다
+  it("화면 밖 content-visibility: auto의 글은 수집한다", () => {
+    mount(`
+      <main>
+        <div style="height:10000px"></div>
+        <div style="content-visibility:auto"><p>Far below</p></div>
+      </main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Far below"]);
+  });
+});
+
 describe("원문 보존", () => {
   // R10·C6: 수집 중 원문 글·요소·링크를 변경하지 않음
   it("원문 DOM을 변경하지 않는다", () => {

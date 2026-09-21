@@ -228,11 +228,29 @@ const EXCLUDED_SELECTOR = [
 /** 텍스트 노드를 번역할 글에 넣을지 판단한다. 본문 영역 바깥 조상의 설정도 따른다. */
 function isTranslatable(text: Text): boolean {
   const parent = text.parentElement;
-  if (parent === null || isInExcludedElement(parent)) return false;
+  if (parent === null || isInExcludedElement(parent) || !isVisible(parent)) return false;
 
   // HTMLElement.translate는 가장 가까운 유효한 translate 값을 상속해 계산한다.
   // 대소문자를 가리지 않고, 잘못된 값은 무시하고 부모 값을 따른다.
   return !(parent instanceof HTMLElement) || parent.translate;
+}
+
+/**
+ * 글을 직접 감싼 요소가 화면에 보이는지 계산된 스타일로 판단한다.
+ * display: none·hidden, 닫힌 details, content-visibility: hidden, 조상의 opacity: 0은 checkVisibility가 걸러 낸다.
+ * 화면 밖이라 렌더링을 건너뛴 content-visibility: auto는 보이는 것으로 본다.
+ */
+function isVisible(element: Element): boolean {
+  // css visibility는 상속되고 자식이 되살릴 수 있으므로 글을 직접 감싼 요소의 계산값만 본다.
+  if (getComputedStyle(element).visibility !== "visible") return false;
+
+  // display: contents 요소는 상자가 없어 checkVisibility가 늘 false이므로, 상자가 있는 가장
+  // 가까운 조상을 대신 검사한다. contents 요소에는 opacity도 적용되지 않는다.
+  let boxed: Element | null = element;
+  while (boxed !== null && getComputedStyle(boxed).display === "contents") {
+    boxed = boxed.parentElement;
+  }
+  return boxed !== null && boxed.checkVisibility({ opacityProperty: true });
 }
 
 /** 요소 자신이나 조상이 번역하지 않는 요소인지 확인한다. code는 블록으로 배치될 때만 제외한다. */
