@@ -4,7 +4,7 @@
 
 - `apps/extension/`: WXT + React 확장. `entrypoints/`는 진입점, `utils/`는 DOM 유틸리티, `tests/`와 `e2e/`는 테스트, `assets/`와 `public/`은 정적 자산.
 - `apps/web/`: Next.js 소개 사이트. `app/`에 페이지·스타일, `public/`에 정적 자산을 둔다.
-- `specs/<번호>-<기능>/`: 명세·계획·작업 목록. `docs/`에는 설계 문서를 둔다.
+- `docs/`: 설계 문서를 둔다.
 - `packages/`: 공용 프로토콜과 native host를 위한 예정 경로이며 아직 구현하지 않았다.
 
 ## 개발 명령어
@@ -65,15 +65,4 @@ docs: plan.md 및 research.md 문서 보안
 
 ## 작업 원칙
 
-`.specify/memory/constitution.md`를 따르고 명세 범위를 지킨다. 범위 변경 시 명세·계획부터 갱신한다. 웹 코드 수정 전 `apps/web/AGENTS.md`와 설치된 Next.js의 관련 문서를 읽는다.
-
-### Spec Kit 기반 SDD (개발 방식)
-
-- 기본적으로 한 번에 하나의 task만 구현한다.
-- 현재 task가 완료되면 다음 task를 시작하지 말고 STOP한다.
-- 완료된 task는 `tasks.md`에서 체크한다.
-- task 완료 후 다음 내용을 보고한다:
-  - 변경된 파일
-  - 구현 내용
-  - 테스트 결과
-  - 추천 커밋 메시지 (메세지는 위 [커밋 전략](#커밋) 참고)
+웹 코드 수정 전 `apps/web/AGENTS.md`와 설치된 Next.js의 관련 문서를 읽는다.
