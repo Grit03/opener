@@ -444,6 +444,83 @@ describe("translate 상속과 재지정", () => {
   });
 });
 
+describe("목표 언어로 쓰인 글 제외", () => {
+  // 목표 언어(한국어)로 표시된 글은 지역·대소문자와 관계없이 제외
+  it.each(["ko", "ko-KR", "KO-kr", "ko-Kore"])('lang="%s"인 글을 제외한다', (lang) => {
+    mount(`<main><p>Before</p><p lang="${lang}">안녕하세요</p><p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // 목표 언어가 아니거나 언어를 알 수 없으면 번역할 글로 본다
+  it.each([
+    ["영어", ` lang="en"`],
+    ["영어 지역 태그", ` lang="en-US"`],
+    ["다른 언어", ` lang="ja"`],
+    ["빈 값", ` lang=""`],
+    ["누락", ""],
+    ["잘못된 값", ` lang="!!!"`],
+  ])("lang이 %s인 글은 수집한다", (_label, attribute) => {
+    mount(`<main><p${attribute}>Hello</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Hello"]);
+  });
+
+  // 가장 가까운 lang을 따르므로 자식이 부모의 언어를 재지정할 수 있다. 빈 값은 "알 수 없음"으로 재지정한다.
+  it("부모의 lang을 상속하고 자식의 lang으로 재지정한다", () => {
+    mount(`
+      <main lang="ko">
+        <p>상속한 한국어</p>
+        <p lang="en">English <span>inherited</span></p>
+        <p lang="">Unknown</p>
+        <div lang="en"><p lang="ko">다시 한국어</p></div>
+      </main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["English inherited", "Unknown"]);
+  });
+
+  // lang이 없거나 틀려도 한글이 하나라도 있는 글은 이미 목표 언어로 쓰인 글로 본다
+  it.each([
+    ["lang이 없는", `<p>안녕하세요</p>`],
+    ["lang이 영어로 잘못 표시된", `<p lang="en">안녕하세요</p>`],
+    ["영어가 더 많이 섞인", `<p>Claude Code 설치</p>`],
+  ])("%s 한국어 글을 제외한다", (_label, markup) => {
+    mount(`<main><p>Before</p>${markup}<p>After</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
+  // 한글 여부는 이어 붙인 글 전체로 판단하므로 인라인 요소 안의 영어만 따로 남지 않는다
+  it("한국어 문장 안의 영어 링크 글을 따로 수집하지 않는다", () => {
+    mount(`<main><p>Before</p><p>이 문서는 <a href="/react">React</a> 기준입니다</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before"]);
+  });
+
+  // 본문 영역 바깥 조상의 lang도 따르므로 후보 본문에 글이 없으면 다음 후보로 넘어간다
+  it("조상의 lang이 목표 언어라 main에 수집할 글이 없으면 article로 넘어간다", () => {
+    mount(`
+      <div lang="ko"><main><p>한국어 본문</p></main></div>
+      <article><p>Article text</p></article>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Article text"]);
+  });
+});
+
 describe("화면에 보이지 않는 글 제외", () => {
   // R8: 계산된 스타일로 보이지 않는 글은 자신과 조상 어느 쪽에서 숨겨도 제외
   it.each([

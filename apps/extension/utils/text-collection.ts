@@ -61,7 +61,7 @@ function collectTextWithin(contentArea: Element): SourceText[] {
   let pendingAnchor: Element = contentArea;
   let pendingNodes: Text[] = [];
 
-  /** 모은 텍스트 노드를 글 하나로 확정하고 비운다. 공백뿐인 글은 결과에 넣지 않는다. */
+  /** 모은 텍스트 노드를 글 하나로 확정하고 비운다. 공백뿐이거나 한글이 있는 글은 결과에 넣지 않는다. */
   const finishPendingText = () => {
     const sourceText = createSourceText(pendingAnchor, pendingNodes);
     if (sourceText) collected.push(sourceText);
@@ -122,7 +122,7 @@ function findAnchor(text: Text, contentArea: Element): Element {
   return candidate ?? contentArea;
 }
 
-/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 공백뿐이면 null을 반환한다. */
+/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 공백뿐이거나 목표 언어의 글이면 null을 반환한다. */
 function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | null {
   // 노드 경계에 걸친 공백도 하나로 합쳐지도록 먼저 이어 붙인다. 그다음 연속된 공백 문자
   // (\s: 스페이스·탭·줄바꿈·NBSP 등)를 스페이스 하나로 바꾸고 앞뒤 공백을 없앤다.
@@ -132,7 +132,10 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
     .replace(/\s+/gu, " ")
     .trim();
 
-  return text ? { text, anchor, sourceNodes } : null;
+  // 한글 여부는 노드마다가 아니라 이어 붙인 글 전체로 판단한다. 노드마다 보면 한국어 문장 안의
+  // 영어 링크 글만 따로 남는다.
+  if (!text || TARGET_SCRIPT.test(text)) return null;
+  return { text, anchor, sourceNodes };
 }
 
 // --------------------------------------------------------------------------------
@@ -229,6 +232,7 @@ const EXCLUDED_SELECTOR = [
 function isTranslatable(text: Text): boolean {
   const parent = text.parentElement;
   if (parent === null || isInExcludedElement(parent) || !isVisible(parent)) return false;
+  if (isInTargetLanguage(parent)) return false;
 
   // HTMLElement.translate는 가장 가까운 유효한 translate 값을 상속해 계산한다.
   // 대소문자를 가리지 않고, 잘못된 값은 무시하고 부모 값을 따른다.
@@ -251,6 +255,31 @@ function isVisible(element: Element): boolean {
     boxed = boxed.parentElement;
   }
   return boxed !== null && boxed.checkVisibility({ opacityProperty: true });
+}
+
+/** 번역 결과의 언어. 이미 이 언어로 쓰인 글은 번역하지 않는다. */
+const TARGET_LANGUAGE = "ko";
+
+/**
+ * 목표 언어의 문자. lang이 없거나 틀린 페이지도 많아서 글 내용으로 한 번 더 확인한다. 한국어 글에는
+ * 영어가 자주 섞이지만 영어 글에 한글이 섞이는 일은 드물어서, 한글이 하나라도 있으면 한국어 글로 본다.
+ */
+const TARGET_SCRIPT = /\p{Script=Hangul}/u;
+
+/**
+ * 가장 가까운 lang이 목표 언어인지 확인한다. lang=""은 "알 수 없음"으로 재지정한 것이므로
+ * 조상 값을 따르지 않는다. lang이 없거나 비었거나 잘못된 태그면 목표 언어가 아닌 것으로 본다.
+ */
+function isInTargetLanguage(element: Element): boolean {
+  const lang = element.closest("[lang]")?.getAttribute("lang");
+  if (!lang) return false;
+
+  try {
+    // Intl.Locale은 대소문자와 지역·문자 태그를 정규화하고, 잘못된 태그면 RangeError를 던진다.
+    return new Intl.Locale(lang).language === TARGET_LANGUAGE;
+  } catch {
+    return false;
+  }
 }
 
 /** 요소 자신이나 조상이 번역하지 않는 요소인지 확인한다. code는 블록으로 배치될 때만 제외한다. */
