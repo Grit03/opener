@@ -6,8 +6,11 @@ import {
 } from "./text-collection";
 
 export interface TranslationDisplayController {
+  /** 원문을 새로 수집하고 화면에 들어오는 글에 번역을 표시한다. */
   enable(): void;
+  /** 표시한 번역을 모두 지운다. 다시 켤 수 있다. */
   disable(): void;
+  /** 번역과 토글 버튼을 지우고 컨트롤러를 폐기한다. 다시 켤 수 없다. */
   destroy(): void;
 }
 
@@ -44,85 +47,50 @@ export function createTranslationDisplayController(
 ): TranslationDisplayController {
   const toggle = appendTranslationToggle(doc);
   const translationElements = new Map<SourceText, HTMLElement>();
-  const visibleAnchors = new Set<Element>();
-  const sourcesByAnchor = new Map<Element, SourceText[]>();
+  let sourcesByAnchor = new Map<Element, SourceText[]>();
+  /** 켜져 있는 동안에만 존재한다. */
   let observer: IntersectionObserver | null = null;
-  let enabled = false;
   let destroyed = false;
-  let session = 0;
 
-  const canDisplayTranslation = (source: SourceText) => {
-    return (
-      enabled && !doc.hidden && !translationElements.has(source) && isSourceTextTranslatable(source)
-    );
-  };
-
+  /** 아직 표시하지 않은 유효한 원문에 번역 요소를 하나 붙인다. */
   const displayTranslation = (source: SourceText) => {
-    if (!canDisplayTranslation(source)) return;
+    if (translationElements.has(source) || !isSourceTextTranslatable(source)) return;
 
     const translation = createTranslationElement(doc, source);
-    if (!insertTranslation(source, translation)) return;
-    translationElements.set(source, translation);
+    if (insertTranslation(source, translation)) translationElements.set(source, translation);
   };
 
-  const displayVisibleTranslations = () => {
-    [...visibleAnchors]
-      .flatMap((anchor) => sourcesByAnchor.get(anchor) ?? [])
-      .forEach(displayTranslation);
-  };
+  const enable = () => {
+    if (observer || destroyed) return;
 
-  const observeSourceAnchors = (currentSession: number) => {
-    observer = new IntersectionObserver((entries) => {
-      if (!enabled || currentSession !== session) return;
-
-      updateVisibleAnchors(visibleAnchors, entries);
-      if (doc.hidden) return;
+    sourcesByAnchor = groupByAnchor(collectTextForTranslation(doc));
+    // 숨겨진 탭에서는 브라우저가 교차 계산을 멈췄다가, 다시 보일 때 현재 상태로 알린다.
+    const current = new IntersectionObserver((entries) => {
+      // disconnect() 전에 쌓인 알림은 끈 뒤에도 전달될 수 있다.
+      if (current !== observer) return;
 
       entries
         .filter((entry) => entry.isIntersecting)
         .flatMap((entry) => sourcesByAnchor.get(entry.target) ?? [])
         .forEach(displayTranslation);
     });
-    sourcesByAnchor.forEach((_sources, anchor) => observer?.observe(anchor));
-  };
-
-  const enable = () => {
-    if (enabled || destroyed) return;
-
-    enabled = true;
-    session += 1;
-    updateTranslationToggle(toggle, enabled);
-
-    for (const source of collectTextForTranslation(doc)) {
-      const sources = sourcesByAnchor.get(source.anchor) ?? [];
-      sources.push(source);
-      sourcesByAnchor.set(source.anchor, sources);
-    }
-    observeSourceAnchors(session);
+    for (const anchor of sourcesByAnchor.keys()) current.observe(anchor);
+    observer = current;
+    updateTranslationToggle(toggle, true);
   };
 
   const disable = () => {
-    enabled = false;
-    session += 1;
     observer?.disconnect();
     observer = null;
-    visibleAnchors.clear();
     sourcesByAnchor.clear();
     translationElements.forEach((translation) => translation.remove());
     translationElements.clear();
-    updateTranslationToggle(toggle, enabled);
+    updateTranslationToggle(toggle, false);
   };
 
-  const onVisibilityChange = () => {
-    if (!enabled || doc.hidden) return;
-
-    displayVisibleTranslations();
-    observer?.disconnect();
-    sourcesByAnchor.forEach((_sources, anchor) => observer?.observe(anchor));
-  };
-
+  /** 토글 버튼 클릭으로 켜짐과 꺼짐을 바꾼다. */
   const onToggle = () => {
-    if (enabled) disable();
+    if (observer) disable();
     else enable();
   };
 
@@ -131,17 +99,16 @@ export function createTranslationDisplayController(
     disable();
     destroyed = true;
     toggle.removeEventListener("click", onToggle);
-    doc.removeEventListener("visibilitychange", onVisibilityChange);
     toggle.remove();
   };
 
   toggle.addEventListener("click", onToggle);
-  doc.addEventListener("visibilitychange", onVisibilityChange);
   enable();
 
   return { enable, disable, destroy };
 }
 
+/** 페이지에 번역 표시 토글 버튼을 추가한다. */
 function appendTranslationToggle(doc: Document): HTMLButtonElement {
   const toggle = doc.createElement("button");
   toggle.type = "button";
@@ -150,11 +117,13 @@ function appendTranslationToggle(doc: Document): HTMLButtonElement {
   return toggle;
 }
 
+/** 토글 버튼의 문구와 on/off 상태를 관리한다. */
 function updateTranslationToggle(toggle: HTMLButtonElement, enabled: boolean): void {
   toggle.textContent = enabled ? "번역 표시 끄기" : "번역 표시 켜기";
   toggle.setAttribute("aria-pressed", String(enabled));
 }
 
+/** 기준 요소의 display에 맞춰 인라인 또는 블록 번역 요소를 만든다. */
 function createTranslationElement(doc: Document, source: SourceText): HTMLElement {
   const translation = doc.createElement(TRANSLATION_TAG);
   const isInline = !isBlock(source.anchor);
@@ -166,33 +135,38 @@ function createTranslationElement(doc: Document, source: SourceText): HTMLElemen
   return translation;
 }
 
-function updateVisibleAnchors(
-  visibleAnchors: Set<Element>,
-  entries: IntersectionObserverEntry[],
-): void {
-  for (const entry of entries) {
-    if (entry.isIntersecting) visibleAnchors.add(entry.target);
-    else visibleAnchors.delete(entry.target);
+/** IntersectionObserver 알림(요소)에서 원문을 찾을 수 있도록 원문을 기준 요소별로 묶는다. */
+function groupByAnchor(sources: SourceText[]): Map<Element, SourceText[]> {
+  const sourcesByAnchor = new Map<Element, SourceText[]>();
+  for (const source of sources) {
+    const group = sourcesByAnchor.get(source.anchor) ?? [];
+    group.push(source);
+    sourcesByAnchor.set(source.anchor, group);
   }
+  return sourcesByAnchor;
 }
 
-/** 일반 글은 기준 요소의 형제로, 목록·표 같은 구조 요소의 글은 해당 요소 안에 표시한다. */
-function insertTranslation(source: SourceText, translation: HTMLElement): boolean {
-  if (!INNER_TRANSLATION_TAGS.has(source.anchor.tagName)) {
-    source.anchor.after(translation);
+/**
+ * 번역 요소를 넣고 성공 여부를 돌려준다.
+ * 일반 요소는 기준 요소 바로 뒤에 넣는다. 목록·표 요소는 형제로 넣으면 HTML이 깨지므로
+ * 요소 안에서 원문을 품은 직계 자식 뒤에 넣는다. 맨 끝에 넣으면 하위 목록 뒤로 밀리고,
+ * 원문 텍스트 바로 뒤에 넣으면 링크 안에 들어가기 때문이다.
+ *
+ * 예:
+ * <li>                                 ← anchor
+ *   <span>Wrapped <a>item</a></span>   ← "item"을 품은 직계 자식. 이 뒤에 넣는다.
+ *   <ul><li>Child item</li></ul>       ← 하위 목록
+ * </li>
+ */
+function insertTranslation({ anchor, sourceNodes }: SourceText, translation: HTMLElement): boolean {
+  if (!INNER_TRANSLATION_TAGS.has(anchor.tagName)) {
+    anchor.after(translation);
     return translation.isConnected;
   }
 
-  const lastSourceNode = source.sourceNodes.at(-1);
-  if (!lastSourceNode) return false;
-
-  let after: ChildNode = lastSourceNode;
-  while (after.parentNode !== source.anchor) {
-    const parent = after.parentNode;
-    if (!(parent instanceof Element)) return false;
-    after = parent;
-  }
-
-  after.after(translation);
-  return true;
+  const lastSourceTextNode = sourceNodes.at(-1) ?? null; // ① 마지막 원문 텍스트 노드: "item"
+  const lastSourceChild = [...anchor.childNodes] // ② anchor의 직계 자식들: [<span>, <ul>]
+    .find((child) => child.contains(lastSourceTextNode)); // ③ "item"을 품은 자식은? → <span>
+  lastSourceChild?.after(translation); // ④ <span> 뒤에 넣는다
+  return lastSourceChild !== undefined;
 }

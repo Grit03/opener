@@ -52,6 +52,22 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
     controller.destroy();
   });
 
+  it("목록 안에서 원문이 다른 요소에 감싸져 있으면 감싼 요소 바로 뒤에 표시한다", async () => {
+    mount(`
+      <main>
+        <ul><li id="item"><span id="wrapper">Wrapped item</span><ul><li>Child item</li></ul></li></ul>
+      </main>
+    `);
+    const controller = createTranslationDisplayController(document);
+
+    await vi.waitFor(() => expect(document.querySelectorAll(translationSelector)).toHaveLength(2));
+    const wrapperTranslation = document.querySelector("#wrapper")?.nextElementSibling;
+    expect(wrapperTranslation?.matches(translationSelector)).toBe(true);
+    expect(wrapperTranslation?.textContent).toBe("Wrapped item");
+
+    controller.destroy();
+  });
+
   it("내부 스크롤에서 새 문장만 한 번 표시하고 OFF 동안에는 만들지 않는다", async () => {
     mount(`
       <main id="scroller" style="height:100px;overflow:auto">
@@ -130,21 +146,5 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
     await vi.waitFor(() => expect(document.querySelectorAll(translationSelector)).toHaveLength(1));
 
     controller.destroy();
-  });
-
-  it("비활성 탭에서는 표시를 미루고 다시 활성화되면 처리한다", async () => {
-    mount(`<main><p>Visible paragraph</p></main>`);
-    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
-    const controller = createTranslationDisplayController(document);
-
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-    expect(document.querySelectorAll(translationSelector)).toHaveLength(0);
-
-    hidden.mockReturnValue(false);
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.waitFor(() => expect(document.querySelectorAll(translationSelector)).toHaveLength(1));
-
-    controller.destroy();
-    hidden.mockRestore();
   });
 });
