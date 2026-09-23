@@ -1,15 +1,21 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Opener E2E</title>
   </head>
   <body>
-    <main>
-      <h1>Opener E2E 테스트 페이지</h1>
-      <p>This page checks whether the Opener content script runs.</p>
-      <p>테스트 페이지에는 JavaScript가 없습니다. 확장은 Chromium이 주입합니다.</p>
+    <main id="scroller" style="height: 160px; overflow: auto">
+      <h1>Opener E2E page</h1>
+      <div id="narrow" style="width: 200px">
+        <p id="first" style="overflow-wrap: anywhere">
+          The first paragraph is visible.
+          https://example.com/this-is-a-very-long-url-without-any-natural-break-points
+        </p>
+      </div>
+      <div style="height: 400px"></div>
+      <p id="second">The second paragraph appears after scrolling.</p>
     </main>
   </body>
 </html>

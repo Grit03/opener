@@ -46,6 +46,32 @@ export function collectTextForTranslation(doc: Document = document): SourceText[
   return collectTextWithin(doc.body);
 }
 
+/**
+ * 수집한 뒤 표시하기 전까지 페이지가 바뀔 수 있다.
+ * 기준 요소와 원문 노드가 문서에 연결되어 있는지 확인한다.
+ * 원문 노드가 기존 기준 요소 안에 남아 있고 현재도 번역 가능한지도 확인한다.
+ */
+export function isSourceTextTranslatable(sourceText: SourceText): boolean {
+  const { anchor, sourceNodes } = sourceText;
+  // Node.isConnected는 노드가 현재 문서의 DOM 트리에 연결되어 있는지 나타낸다.
+  const isAnchorInDocument = anchor.isConnected;
+  const hasSourceNodes = sourceNodes.length > 0;
+  if (!isAnchorInDocument || !hasSourceNodes) return false;
+
+  const areAllSourceNodesStillTranslatable = sourceNodes.every((sourceNode) => {
+    const isSourceNodeInDocument = sourceNode.isConnected;
+    if (!isSourceNodeInDocument) return false;
+
+    const isSourceNodeInsideAnchor = anchor.contains(sourceNode);
+    if (!isSourceNodeInsideAnchor) return false;
+
+    const isSourceNodeStillTranslatable = isTranslatable(sourceNode);
+    return isSourceNodeStillTranslatable;
+  });
+
+  return areAllSourceNodesStillTranslatable;
+}
+
 /** container 안의 tag 요소 중 같은 태그의 조상이 없는 것만 문서 순서대로 반환한다. */
 function findOutermost(container: Element, tag: string): Element[] {
   const matched = [...container.querySelectorAll(tag)];
