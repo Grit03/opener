@@ -95,7 +95,6 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
 
     controller.disable();
     expect(document.querySelectorAll(translationSelector)).toHaveLength(0);
-    expect(document.querySelector("button.opener-translation-toggle")).not.toBeNull();
 
     document.querySelector("#third")!.firstChild!.textContent = "Updated third paragraph";
     scroller.scrollTop = 760;

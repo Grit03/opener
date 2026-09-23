@@ -10,14 +10,13 @@ export interface TranslationDisplayController {
   enable(): void;
   /** 표시한 번역을 모두 지운다. 다시 켤 수 있다. */
   disable(): void;
-  /** 번역과 토글 버튼을 지우고 컨트롤러를 폐기한다. 다시 켤 수 없다. */
+  /** 표시한 번역을 지우고 컨트롤러를 폐기한다. 다시 켤 수 없다. */
   destroy(): void;
 }
 
 const TRANSLATION_TAG = "opener-translation";
 const INLINE_TRANSLATION_CLASS = "opener-translation--inline";
 const BLOCK_TRANSLATION_CLASS = "opener-translation--block";
-const TOGGLE_CLASS = "opener-translation-toggle";
 /** 형제로 번역을 끼워 넣으면 HTML 구조가 깨지는 요소. 번역을 요소 안에 넣는다. */
 const INNER_TRANSLATION_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName>([
   "HTML",
@@ -45,7 +44,6 @@ const INNER_TRANSLATION_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName
 export function createTranslationDisplayController(
   doc: Document = document,
 ): TranslationDisplayController {
-  const toggle = appendTranslationToggle(doc);
   const translationElements = new Map<SourceText, HTMLElement>();
   let sourcesByAnchor = new Map<Element, SourceText[]>();
   /** 켜져 있는 동안에만 존재한다. */
@@ -76,7 +74,6 @@ export function createTranslationDisplayController(
     });
     for (const anchor of sourcesByAnchor.keys()) current.observe(anchor);
     observer = current;
-    updateTranslationToggle(toggle, true);
   };
 
   const disable = () => {
@@ -85,42 +82,16 @@ export function createTranslationDisplayController(
     sourcesByAnchor.clear();
     translationElements.forEach((translation) => translation.remove());
     translationElements.clear();
-    updateTranslationToggle(toggle, false);
-  };
-
-  /** 토글 버튼 클릭으로 켜짐과 꺼짐을 바꾼다. */
-  const onToggle = () => {
-    if (observer) disable();
-    else enable();
   };
 
   const destroy = () => {
-    if (destroyed) return;
     disable();
     destroyed = true;
-    toggle.removeEventListener("click", onToggle);
-    toggle.remove();
   };
 
-  toggle.addEventListener("click", onToggle);
   enable();
 
   return { enable, disable, destroy };
-}
-
-/** 페이지에 번역 표시 토글 버튼을 추가한다. */
-function appendTranslationToggle(doc: Document): HTMLButtonElement {
-  const toggle = doc.createElement("button");
-  toggle.type = "button";
-  toggle.className = TOGGLE_CLASS;
-  (doc.body ?? doc.documentElement).append(toggle);
-  return toggle;
-}
-
-/** 토글 버튼의 문구와 on/off 상태를 관리한다. */
-function updateTranslationToggle(toggle: HTMLButtonElement, enabled: boolean): void {
-  toggle.textContent = enabled ? "번역 표시 끄기" : "번역 표시 켜기";
-  toggle.setAttribute("aria-pressed", String(enabled));
 }
 
 /** 기준 요소의 display에 맞춰 인라인 또는 블록 번역 요소를 만든다. */

@@ -1,0 +1,16 @@
+button {
+  position: fixed;
+  inset-inline-end: 16px;
+  inset-block-end: 16px;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: Canvas;
+  color: CanvasText;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  cursor: pointer;
+}

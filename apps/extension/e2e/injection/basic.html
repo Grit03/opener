@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Opener E2E</title>
+    <!-- 사이트의 전역 버튼 스타일이 확장의 토글 버튼에 영향을 주지 않는지 확인한다. -->
+    <style>
+      button {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <main id="scroller" style="height: 160px; overflow: auto">
