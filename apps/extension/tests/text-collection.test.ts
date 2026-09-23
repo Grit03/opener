@@ -399,6 +399,19 @@ describe("translate 상속과 재지정", () => {
   });
 
   // R3·R6: 제외한 인라인 글의 노드가 결과에 섞이지 않고 나머지는 문장으로 유지
+  // Google 번역과 Chrome 번역이 따르는 관례. 검색 결과의 URL(cite)이 이렇게 표시된다.
+  it("class=notranslate 영역과 그 자손을 제외한다", () => {
+    mount(`
+      <main><p>Title</p><div class="result notranslate">
+        <cite style="display:block">https://nodejs.org › <span translate="yes">docs</span></cite>
+      </div><p>After</p></main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Title", "After"]);
+  });
+
   it("translate=no인 인라인 글을 제외하고 원본 노드 참조를 유지한다", () => {
     mount(`<main><p>Hello <span translate="no">private </span>world!</p></main>`);
     const paragraph = document.querySelector("p")!;

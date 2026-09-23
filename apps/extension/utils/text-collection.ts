@@ -219,6 +219,8 @@ const EXCLUDED_SELECTOR = [
   "select",
   "datalist",
   "button",
+  // Google 번역과 Chrome 번역이 translate="no"처럼 따르는 관례. 검색 결과의 URL 등에 쓰인다.
+  ".notranslate",
   // 편집 영역. 값이 비어 있어도 편집 가능하다.
   '[contenteditable=""]',
   '[contenteditable="true" i]',
