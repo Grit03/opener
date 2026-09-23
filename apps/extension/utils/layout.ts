@@ -1,3 +1,9 @@
+/** querySelector 등에 쓰는 소문자 HTML 태그 이름. 태그 목록 상수의 오타를 막는 데 쓴다. */
+export type HtmlTagName = keyof HTMLElementTagNameMap;
+
+/** element.tagName이 돌려주는 대문자 HTML 태그 이름. */
+export type UppercaseHtmlTagName = Uppercase<HtmlTagName>;
+
 /**
  * 요소를 부모의 인라인 흐름에 두는 display 값. contents는 인라인 계열은 아니지만 자기 상자를
  * 만들지 않아 자식이 부모의 흐름에 그대로 놓이므로 함께 둔다.

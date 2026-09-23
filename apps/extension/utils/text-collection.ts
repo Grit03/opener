@@ -21,7 +21,7 @@
 //
 //   결과: "Intro"(기준 요소 main), "Hello world!"(기준 요소 p)
 
-import { isBlock } from "./layout";
+import { type HtmlTagName, isBlock, type UppercaseHtmlTagName } from "./layout";
 
 export interface SourceText {
   text: string;
@@ -29,7 +29,8 @@ export interface SourceText {
   sourceNodes: Text[];
 }
 
-const CONTENT_AREA_TAGS = ["main", "article"];
+const CONTENT_AREA_TAGS = ["main", "article"] as const satisfies HtmlTagName[];
+type ContentAreaTag = (typeof CONTENT_AREA_TAGS)[number];
 
 /**
  * 본문 영역에서 번역할 글을 모아 문서 순서대로 반환한다.
@@ -39,9 +40,7 @@ export function collectTextForTranslation(doc: Document = document): SourceText[
   if (!doc.body) return [];
 
   for (const tag of CONTENT_AREA_TAGS) {
-    // 이 태그의 요소를 모두 본문 영역으로 쓰되, 같은 태그 안에 중첩된 요소는 뺀다.
-    // 중첩된 요소까지 쓰면 바깥 요소를 훑을 때 이미 모은 글을 한 번 더 모은다.
-    const contentAreas = findOutermost(doc.body, tag);
+    const contentAreas = findOutermostContentAreas(doc.body, tag);
     const collected = contentAreas.flatMap(collectTextWithin);
     if (collected.length > 0) return collected;
   }
@@ -74,9 +73,13 @@ export function isSourceTextTranslatable(sourceText: SourceText): boolean {
   return areAllSourceNodesStillTranslatable;
 }
 
-/** container 안의 tag 요소 중 같은 태그의 조상이 없는 것만 문서 순서대로 반환한다. */
-function findOutermost(container: Element, tag: string): Element[] {
-  const matched = [...container.querySelectorAll(tag)];
+/**
+ * body 안에서 본문 영역 태그(main 또는 article)인 tag 요소를 찾아 문서 순서대로 반환한다.
+ * 같은 태그 안에 중첩된 요소는 뺀다. 중첩된 요소까지 쓰면 바깥 요소를 훑을 때 이미 모은 글을
+ * 한 번 더 모은다.
+ */
+function findOutermostContentAreas(body: HTMLElement, tag: ContentAreaTag): HTMLElement[] {
+  const matched = [...body.querySelectorAll(tag)];
   return matched.filter((element) => !element.parentElement?.closest(tag));
 }
 
@@ -174,7 +177,7 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
  * CSS display와 관계없이 앞뒤 글을 나누는 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다.
  * 번역을 어디에 넣을지 정하는 translation-display의 INNER_TRANSLATION_TAGS와는 기준이 다르다.
  */
-const TEXT_BOUNDARY_TAGS = new Set([
+const TEXT_BOUNDARY_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName>([
   "H1",
   "H2",
   "H3",

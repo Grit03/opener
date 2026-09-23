@@ -1,4 +1,4 @@
-import { isBlock } from "./layout";
+import { isBlock, type UppercaseHtmlTagName } from "./layout";
 import {
   collectTextForTranslation,
   isSourceTextTranslatable,
@@ -16,7 +16,7 @@ const INLINE_TRANSLATION_CLASS = "opener-translation--inline";
 const BLOCK_TRANSLATION_CLASS = "opener-translation--block";
 const TOGGLE_CLASS = "opener-translation-toggle";
 /** 형제로 번역을 끼워 넣으면 HTML 구조가 깨지는 요소. 번역을 요소 안에 넣는다. */
-const INNER_TRANSLATION_TAGS = new Set([
+const INNER_TRANSLATION_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName>([
   "HTML",
   "BODY",
   "MAIN",
