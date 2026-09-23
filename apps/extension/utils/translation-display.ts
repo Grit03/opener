@@ -1,3 +1,4 @@
+import { isBlock } from "./layout";
 import {
   collectTextForTranslation,
   isSourceTextTranslatable,
@@ -14,6 +15,7 @@ const TRANSLATION_TAG = "opener-translation";
 const INLINE_TRANSLATION_CLASS = "opener-translation--inline";
 const BLOCK_TRANSLATION_CLASS = "opener-translation--block";
 const TOGGLE_CLASS = "opener-translation-toggle";
+/** 형제로 번역을 끼워 넣으면 HTML 구조가 깨지는 요소. 번역을 요소 안에 넣는다. */
 const INNER_TRANSLATION_TAGS = new Set([
   "HTML",
   "BODY",
@@ -34,17 +36,6 @@ const INNER_TRANSLATION_TAGS = new Set([
   "TH",
   "TD",
   "CAPTION",
-]);
-const INLINE_DISPLAYS = new Set([
-  "inline",
-  "inline-block",
-  "inline-flex",
-  "inline-grid",
-  "inline-table",
-  "contents",
-  "ruby",
-  "ruby-base",
-  "ruby-text",
 ]);
 
 /** 화면에 들어온 번역 후보 옆에 번역 표시 영역을 만든다. */
@@ -166,7 +157,7 @@ function updateTranslationToggle(toggle: HTMLButtonElement, enabled: boolean): v
 
 function createTranslationElement(doc: Document, source: SourceText): HTMLElement {
   const translation = doc.createElement(TRANSLATION_TAG);
-  const isInline = INLINE_DISPLAYS.has(getComputedStyle(source.anchor).display);
+  const isInline = !isBlock(source.anchor);
 
   translation.className = isInline ? INLINE_TRANSLATION_CLASS : BLOCK_TRANSLATION_CLASS;
   translation.setAttribute("aria-hidden", "true");

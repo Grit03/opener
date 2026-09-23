@@ -21,6 +21,8 @@
 //
 //   결과: "Intro"(기준 요소 main), "Hello world!"(기준 요소 p)
 
+import { isBlock } from "./layout";
+
 export interface SourceText {
   text: string;
   anchor: Element;
@@ -168,7 +170,10 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
 // 경계 요소 판정
 // --------------------------------------------------------------------------------
 
-/** CSS display와 관계없이 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다. */
+/**
+ * CSS display와 관계없이 앞뒤 글을 나누는 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다.
+ * 번역을 어디에 넣을지 정하는 translation-display의 INNER_TRANSLATION_TAGS와는 기준이 다르다.
+ */
 const TEXT_BOUNDARY_TAGS = new Set([
   "H1",
   "H2",
@@ -186,36 +191,9 @@ const TEXT_BOUNDARY_TAGS = new Set([
   "BR",
 ]);
 
-/**
- * 앞뒤 글을 나누지 않는 display 값. contents는 인라인 계열은 아니지만 자기 상자를 만들지 않아
- * 자식이 부모의 흐름에 그대로 놓이므로 함께 둔다.
- */
-const INLINE_LEVEL = new Set([
-  "inline",
-  "inline-block",
-  "inline-flex",
-  "inline-grid",
-  "inline-table",
-  "contents",
-  "ruby",
-  "ruby-base",
-  "ruby-text",
-]);
-
 /** 경계 요소인지 판단한다. TEXT_BOUNDARY_TAGS는 CSS와 관계없이, 그 밖의 요소는 블록일 때만 경계다. */
 function isTextBoundary(element: Element): boolean {
   return TEXT_BOUNDARY_TAGS.has(element.tagName) || isBlock(element);
-}
-
-/**
- * 계산된 display가 INLINE_LEVEL에 없으면 블록으로 본다. none도 블록으로 보며, 표시 여부는 여기서
- * 판단하지 않는다. 계산된 값이 비어 있으면(문서에 붙지 않은 요소처럼 스타일이 계산되지 않은 경우)
- * 블록으로 보지 않는다.
- */
-function isBlock(element: Element): boolean {
-  const display = getComputedStyle(element).display;
-  if (display === "") return false;
-  return !INLINE_LEVEL.has(display);
 }
 
 // --------------------------------------------------------------------------------
