@@ -1,0 +1,24 @@
+{
+  "name": "@opener/native-host",
+  "description": "Native messaging host for Opener",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --sourcemap --outfile=dist/main.js && node -e \"require('node:fs').copyFileSync('src/translation-result.schema.json', 'dist/translation-result.schema.json')\"",
+    "start": "node --enable-source-maps dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opener/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "esbuild": "0.28.2"
+  }
+}
