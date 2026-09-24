@@ -155,11 +155,12 @@ function findAnchor(text: Text, contentArea: Element): Element {
 
 /** 원본 노드의 글을 합쳐 수집 결과를 만들고, 번역할 필요가 없다고 생각되는 텍스트라면 null을 반환한다. */
 function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | null {
-  // 코드만 있거나 번역할 필요가 없으면 null을 반환한다.
-  const hasTextOutsideCode = sourceNodes.some(
-    (node) => node.data.trim() && node.parentElement?.closest("code") === null,
+  const textNodesWithContent = sourceNodes.filter((node) => node.data.trim());
+  const containsOnlyCode = textNodesWithContent.every((node) =>
+    node.parentElement?.closest("code"),
   );
-  if (!hasTextOutsideCode) return null;
+  const containsOnlyUrlLinks = textNodesWithContent.every(isUrlLinkText);
+  if (containsOnlyCode || containsOnlyUrlLinks) return null;
 
   // 공백뿐이면, null
   // 노드 경계에 걸친 공백도 하나로 합쳐지도록 먼저 이어 붙인다. 그다음 연속된 공백 문자
@@ -254,6 +255,14 @@ function isTranslatable(text: Text): boolean {
   // HTMLElement.translate는 가장 가까운 유효한 translate 값을 상속해 계산한다.
   // 대소문자를 가리지 않고, 잘못된 값은 무시하고 부모 값을 따른다.
   return !(parent instanceof HTMLElement) || parent.translate;
+}
+
+const URL_TEXT_PATTERN = /^(?:https?:\/\/|www\.)\S+$/iu;
+
+/** 링크 주소를 그대로 표시한 글인지 확인한다. */
+function isUrlLinkText(text: Text): boolean {
+  const linkText = text.parentElement?.closest("a[href]")?.textContent.trim() ?? "";
+  return URL_TEXT_PATTERN.test(linkText);
 }
 
 /**
