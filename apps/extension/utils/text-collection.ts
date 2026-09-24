@@ -153,8 +153,15 @@ function findAnchor(text: Text, contentArea: Element): Element {
   return candidate ?? contentArea;
 }
 
-/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 공백뿐이거나 목표 언어의 글이면 null을 반환한다. */
+/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 번역할 필요가 없다고 생각되는 텍스트라면 null을 반환한다. */
 function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | null {
+  // 코드만 있거나 번역할 필요가 없으면 null을 반환한다.
+  const hasTextOutsideCode = sourceNodes.some(
+    (node) => node.data.trim() && node.parentElement?.closest("code") === null,
+  );
+  if (!hasTextOutsideCode) return null;
+
+  // 공백뿐이면, null
   // 노드 경계에 걸친 공백도 하나로 합쳐지도록 먼저 이어 붙인다. 그다음 연속된 공백 문자
   // (\s: 스페이스·탭·줄바꿈·NBSP 등)를 스페이스 하나로 바꾸고 앞뒤 공백을 없앤다.
   const text = sourceNodes
@@ -163,6 +170,7 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
     .replace(/\s+/gu, " ")
     .trim();
 
+  // 목표 언어와 같으면 null
   // 한글 여부는 노드마다가 아니라 이어 붙인 글 전체로 판단한다. 노드마다 보면 한국어 문장 안의
   // 영어 링크 글만 따로 남는다.
   if (!text || TARGET_SCRIPT.test(text)) return null;

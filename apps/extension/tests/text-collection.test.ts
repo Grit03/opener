@@ -94,6 +94,22 @@ describe("문장 묶기", () => {
     expect(result.map(({ text }) => text)).toEqual(["Run npm start now."]);
   });
 
+  it("인라인 code만 있는 글은 수집하지 않는다", () => {
+    mount(`<main><p><code>npm start</code></p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result).toEqual([]);
+  });
+
+  it("인라인 code로 시작해도 뒤에 일반 텍스트가 있으면 함께 수집한다", () => {
+    mount(`<main><p><code>fetch()</code> returns a promise.</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["fetch() returns a promise."]);
+  });
+
   // R3: 요소 사이에 따로 놓인 공백도 문장에 포함
   it("인라인 요소 사이의 공백을 유지한다", () => {
     mount(`<main><p><span>Hello</span> <span>world</span>!</p></main>`);
