@@ -88,6 +88,7 @@ describe("문장 묶기", () => {
   it.each([
     ["https://example.com/docs", "https://example.com/docs"],
     ["www.example.com/docs", "https://www.example.com/docs"],
+    ["developer.mozilla.org", "https://developer.mozilla.org"],
   ])("URL을 그대로 표시한 링크 글 %s은 수집하지 않는다", (linkText, href) => {
     mount(`<main><p><a href="${href}">${linkText}</a></p></main>`);
 

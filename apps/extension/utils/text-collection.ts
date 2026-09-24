@@ -257,12 +257,10 @@ function isTranslatable(text: Text): boolean {
   return !(parent instanceof HTMLElement) || parent.translate;
 }
 
-const URL_TEXT_PATTERN = /^(?:https?:\/\/|www\.)\S+$/iu;
-
 /** 링크 주소를 그대로 표시한 글인지 확인한다. */
 function isUrlLinkText(text: Text): boolean {
   const linkText = text.parentElement?.closest("a[href]")?.textContent.trim() ?? "";
-  return URL_TEXT_PATTERN.test(linkText);
+  return URL.canParse(linkText) || (linkText.includes(".") && URL.canParse(`https://${linkText}`));
 }
 
 /**
