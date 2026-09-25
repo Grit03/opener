@@ -1,5 +1,5 @@
 import {
-  isRecord,
+  isNonArrayObject,
   parseSegments,
   type TranslateRequest,
   type TranslationResult,
@@ -28,7 +28,7 @@ export function parseTranslationResult(
   value: unknown,
   request: TranslateRequest,
 ): TranslationResult {
-  if (!isRecord(value)) {
+  if (!isNonArrayObject(value)) {
     throw new Error("Expected a translation result object.");
   }
   const translations = parseSegments(value.translations);

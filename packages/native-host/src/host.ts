@@ -1,6 +1,6 @@
 import {
   isNonEmptyString,
-  isRecord,
+  isNonArrayObject,
   parseTranslateRequest,
   type TranslateRequest,
   type TranslateResponse,
@@ -64,7 +64,7 @@ export async function serveNativeHost(
         request = parseTranslateRequest(message);
       } catch {
         const batchId =
-          isRecord(message) && isNonEmptyString(message.batchId) ? message.batchId : null;
+          isNonArrayObject(message) && isNonEmptyString(message.batchId) ? message.batchId : null;
         await writeNativeMessage(output, {
           type: "translate.error",
           batchId,

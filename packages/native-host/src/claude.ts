@@ -1,4 +1,4 @@
-import { isRecord } from "@opener/protocol";
+import { isNonArrayObject } from "@opener/protocol";
 import { readFileSync } from "node:fs";
 import { runCli } from "./run-cli.ts";
 import type { CliAdapter } from "./translate.ts";
@@ -36,7 +36,7 @@ export const runClaude: CliAdapter = async ({ input, instructions, cwd, signal }
 
   const message: unknown = JSON.parse(stdout);
   if (
-    !isRecord(message) ||
+    !isNonArrayObject(message) ||
     message.type !== "result" ||
     message.subtype !== "success" ||
     message.is_error === true ||

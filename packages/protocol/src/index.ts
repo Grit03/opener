@@ -24,7 +24,7 @@ export type TranslateResponse =
       message: string;
     };
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+export function isNonArrayObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -39,7 +39,11 @@ export function parseSegments(value: unknown): Segment[] {
 
   const segmentIds = new Set<string>();
   return value.map((segment: unknown) => {
-    if (!isRecord(segment) || !isNonEmptyString(segment.id) || !isNonEmptyString(segment.text)) {
+    if (
+      !isNonArrayObject(segment) ||
+      !isNonEmptyString(segment.id) ||
+      !isNonEmptyString(segment.text)
+    ) {
       throw new Error("Each segment needs a non-empty id and text.");
     }
     if (segmentIds.has(segment.id)) {
@@ -52,7 +56,7 @@ export function parseSegments(value: unknown): Segment[] {
 
 export function parseTranslateRequest(value: unknown): TranslateRequest {
   if (
-    !isRecord(value) ||
+    !isNonArrayObject(value) ||
     value.type !== "translate.request" ||
     !isNonEmptyString(value.batchId) ||
     (value.provider !== "claude" && value.provider !== "codex") ||
