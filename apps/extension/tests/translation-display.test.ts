@@ -5,7 +5,7 @@ import { createTranslationDisplayController } from "@/utils/translation-display"
 const translationSelector = "opener-translation";
 
 describe("화면에 들어온 글의 번역 영역 표시", () => {
-  it("문단 옆에 표시하되 목록·표 안에서는 올바른 HTML 구조를 유지한다", async () => {
+  it("문단 안에 표시하고 목록·표에서는 올바른 HTML 구조를 유지한다", async () => {
     mount(`
       <main>
         <p id="paragraph">Open <a href="#target">the link</a> and run <code>npm start</code>.</p>
@@ -29,20 +29,20 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
     const controller = createTranslationDisplayController(document);
 
     await vi.waitFor(() => expect(document.querySelectorAll(translationSelector)).toHaveLength(5));
-    const paragraphTranslation = paragraph.nextElementSibling;
+    const paragraphTranslation = paragraph.querySelector(translationSelector);
     expect(paragraph.firstChild).toBe(originalText);
-    expect(paragraph.querySelector(translationSelector)).toBeNull();
     expect(paragraphTranslation?.matches(translationSelector)).toBe(true);
+    expect(paragraph.lastChild).toBe(paragraphTranslation);
     expect(paragraphTranslation?.textContent).toBe("Open the link and run npm start.");
     expect(document.querySelector("#item")?.querySelector(translationSelector)).not.toBeNull();
     expect(document.querySelector("#cell")?.querySelector(translationSelector)).not.toBeNull();
     expect(
       document
-        .querySelector("#inline")
-        ?.nextElementSibling?.classList.contains("opener-translation--inline"),
+        .querySelector("#inline > opener-translation")
+        ?.classList.contains("opener-translation--inline"),
     ).toBe(true);
     expect(document.querySelector("#unsafe img")).toBeNull();
-    expect(document.querySelector("#unsafe")?.nextElementSibling?.textContent).toContain("<img");
+    expect(document.querySelector("#unsafe > opener-translation")?.textContent).toContain("<img");
     expect(document.querySelector(translationSelector)?.getAttribute("aria-hidden")).toBe("true");
     expect(input.value).toBe("typed value");
 
@@ -105,11 +105,11 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
     controller.enable();
     await vi.waitFor(() =>
       expect(
-        document.querySelector("#third")?.nextElementSibling?.matches(translationSelector),
+        document.querySelector("#third > opener-translation")?.matches(translationSelector),
       ).toBe(true),
     );
     expect(document.querySelectorAll(translationSelector)).toHaveLength(1);
-    expect(document.querySelector("#third")?.nextElementSibling?.textContent).toBe(
+    expect(document.querySelector("#third > opener-translation")?.textContent).toBe(
       "Updated third paragraph",
     );
 
