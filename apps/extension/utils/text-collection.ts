@@ -21,13 +21,16 @@
 //
 //   결과: "Intro"(기준 요소 main), "Hello world!"(기준 요소 p)
 
+import { type HtmlTagName, isBlock, type UppercaseHtmlTagName } from "./layout";
+
 export interface SourceText {
   text: string;
   anchor: Element;
   sourceNodes: Text[];
 }
 
-const CONTENT_AREA_TAGS = ["main", "article"];
+const CONTENT_AREA_TAGS = ["main", "article"] as const satisfies HtmlTagName[];
+type ContentAreaTag = (typeof CONTENT_AREA_TAGS)[number];
 
 /**
  * 본문 영역에서 번역할 글을 모아 문서 순서대로 반환한다.
@@ -37,18 +40,46 @@ export function collectTextForTranslation(doc: Document = document): SourceText[
   if (!doc.body) return [];
 
   for (const tag of CONTENT_AREA_TAGS) {
-    // 이 태그의 요소를 모두 본문 영역으로 쓰되, 같은 태그 안에 중첩된 요소는 뺀다.
-    // 중첩된 요소까지 쓰면 바깥 요소를 훑을 때 이미 모은 글을 한 번 더 모은다.
-    const contentAreas = findOutermost(doc.body, tag);
+    const contentAreas = findOutermostContentAreas(doc.body, tag);
     const collected = contentAreas.flatMap(collectTextWithin);
     if (collected.length > 0) return collected;
   }
   return collectTextWithin(doc.body);
 }
 
-/** container 안의 tag 요소 중 같은 태그의 조상이 없는 것만 문서 순서대로 반환한다. */
-function findOutermost(container: Element, tag: string): Element[] {
-  const matched = [...container.querySelectorAll(tag)];
+/**
+ * 수집한 뒤 표시하기 전까지 페이지가 바뀔 수 있다.
+ * 기준 요소와 원문 노드가 문서에 연결되어 있는지 확인한다.
+ * 원문 노드가 기존 기준 요소 안에 남아 있고 현재도 번역 가능한지도 확인한다.
+ */
+export function isSourceTextTranslatable(sourceText: SourceText): boolean {
+  const { anchor, sourceNodes } = sourceText;
+  // Node.isConnected는 노드가 현재 문서의 DOM 트리에 연결되어 있는지 나타낸다.
+  const isAnchorInDocument = anchor.isConnected;
+  const hasSourceNodes = sourceNodes.length > 0;
+  if (!isAnchorInDocument || !hasSourceNodes) return false;
+
+  const areAllSourceNodesStillTranslatable = sourceNodes.every((sourceNode) => {
+    const isSourceNodeInDocument = sourceNode.isConnected;
+    if (!isSourceNodeInDocument) return false;
+
+    const isSourceNodeInsideAnchor = anchor.contains(sourceNode);
+    if (!isSourceNodeInsideAnchor) return false;
+
+    const isSourceNodeStillTranslatable = isTranslatable(sourceNode);
+    return isSourceNodeStillTranslatable;
+  });
+
+  return areAllSourceNodesStillTranslatable;
+}
+
+/**
+ * body 안에서 본문 영역 태그(main 또는 article)인 tag 요소를 찾아 문서 순서대로 반환한다.
+ * 같은 태그 안에 중첩된 요소는 뺀다. 중첩된 요소까지 쓰면 바깥 요소를 훑을 때 이미 모은 글을
+ * 한 번 더 모은다.
+ */
+function findOutermostContentAreas(body: HTMLElement, tag: ContentAreaTag): HTMLElement[] {
+  const matched = [...body.querySelectorAll(tag)];
   return matched.filter((element) => !element.parentElement?.closest(tag));
 }
 
@@ -122,8 +153,16 @@ function findAnchor(text: Text, contentArea: Element): Element {
   return candidate ?? contentArea;
 }
 
-/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 공백뿐이거나 목표 언어의 글이면 null을 반환한다. */
+/** 원본 노드의 글을 합쳐 수집 결과를 만들고, 번역할 필요가 없다고 생각되는 텍스트라면 null을 반환한다. */
 function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | null {
+  const textNodesWithContent = sourceNodes.filter((node) => node.data.trim());
+  const containsOnlyCode = textNodesWithContent.every((node) =>
+    node.parentElement?.closest("code"),
+  );
+  const containsOnlyUrlLinks = textNodesWithContent.every(isUrlLinkText);
+  if (containsOnlyCode || containsOnlyUrlLinks) return null;
+
+  // 공백뿐이면, null
   // 노드 경계에 걸친 공백도 하나로 합쳐지도록 먼저 이어 붙인다. 그다음 연속된 공백 문자
   // (\s: 스페이스·탭·줄바꿈·NBSP 등)를 스페이스 하나로 바꾸고 앞뒤 공백을 없앤다.
   const text = sourceNodes
@@ -132,6 +171,7 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
     .replace(/\s+/gu, " ")
     .trim();
 
+  // 목표 언어와 같으면 null
   // 한글 여부는 노드마다가 아니라 이어 붙인 글 전체로 판단한다. 노드마다 보면 한국어 문장 안의
   // 영어 링크 글만 따로 남는다.
   if (!text || TARGET_SCRIPT.test(text)) return null;
@@ -142,8 +182,11 @@ function createSourceText(anchor: Element, sourceNodes: Text[]): SourceText | nu
 // 경계 요소 판정
 // --------------------------------------------------------------------------------
 
-/** CSS display와 관계없이 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다. */
-const TEXT_BOUNDARY_TAGS = new Set([
+/**
+ * CSS display와 관계없이 앞뒤 글을 나누는 경계 요소로 보는 태그. br은 안에 글이 없지만 앞뒤 글을 나눈다.
+ * 번역을 어디에 넣을지 정하는 translation-display의 INNER_TRANSLATION_TAGS와는 기준이 다르다.
+ */
+const TEXT_BOUNDARY_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName>([
   "H1",
   "H2",
   "H3",
@@ -160,36 +203,9 @@ const TEXT_BOUNDARY_TAGS = new Set([
   "BR",
 ]);
 
-/**
- * 앞뒤 글을 나누지 않는 display 값. contents는 인라인 계열은 아니지만 자기 상자를 만들지 않아
- * 자식이 부모의 흐름에 그대로 놓이므로 함께 둔다.
- */
-const INLINE_LEVEL = new Set([
-  "inline",
-  "inline-block",
-  "inline-flex",
-  "inline-grid",
-  "inline-table",
-  "contents",
-  "ruby",
-  "ruby-base",
-  "ruby-text",
-]);
-
 /** 경계 요소인지 판단한다. TEXT_BOUNDARY_TAGS는 CSS와 관계없이, 그 밖의 요소는 블록일 때만 경계다. */
 function isTextBoundary(element: Element): boolean {
   return TEXT_BOUNDARY_TAGS.has(element.tagName) || isBlock(element);
-}
-
-/**
- * 계산된 display가 INLINE_LEVEL에 없으면 블록으로 본다. none도 블록으로 보며, 표시 여부는 여기서
- * 판단하지 않는다. 계산된 값이 비어 있으면(문서에 붙지 않은 요소처럼 스타일이 계산되지 않은 경우)
- * 블록으로 보지 않는다.
- */
-function isBlock(element: Element): boolean {
-  const display = getComputedStyle(element).display;
-  if (display === "") return false;
-  return !INLINE_LEVEL.has(display);
 }
 
 // --------------------------------------------------------------------------------
@@ -212,6 +228,8 @@ const EXCLUDED_SELECTOR = [
   "select",
   "datalist",
   "button",
+  // Google 번역과 Chrome 번역이 translate="no"처럼 따르는 관례. 검색 결과의 URL 등에 쓰인다.
+  ".notranslate",
   // 편집 영역. 값이 비어 있어도 편집 가능하다.
   '[contenteditable=""]',
   '[contenteditable="true" i]',
@@ -237,6 +255,12 @@ function isTranslatable(text: Text): boolean {
   // HTMLElement.translate는 가장 가까운 유효한 translate 값을 상속해 계산한다.
   // 대소문자를 가리지 않고, 잘못된 값은 무시하고 부모 값을 따른다.
   return !(parent instanceof HTMLElement) || parent.translate;
+}
+
+/** 링크 주소를 그대로 표시한 글인지 확인한다. */
+function isUrlLinkText(text: Text): boolean {
+  const linkText = text.parentElement?.closest("a[href]")?.textContent.trim() ?? "";
+  return URL.canParse(linkText) || (linkText.includes(".") && URL.canParse(`https://${linkText}`));
 }
 
 /**

@@ -1,0 +1,20 @@
+opener-translation {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: oklch(55.1% 0.027 264.364); /* Tailwind gray-500 */
+  font: inherit;
+  line-height: 1.5;
+}
+
+opener-translation.opener-translation--block {
+  display: block;
+  margin-block-start: 0.35em;
+}
+
+opener-translation.opener-translation--inline {
+  display: inline;
+  margin-inline-start: 0.35em;
+}

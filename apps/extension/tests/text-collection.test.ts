@@ -85,6 +85,28 @@ describe("문장 묶기", () => {
     ]);
   });
 
+  it.each([
+    ["https://example.com/docs", "https://example.com/docs"],
+    ["www.example.com/docs", "https://www.example.com/docs"],
+    ["developer.mozilla.org", "https://developer.mozilla.org"],
+  ])("URL을 그대로 표시한 링크 글 %s은 수집하지 않는다", (linkText, href) => {
+    mount(`<main><p><a href="${href}">${linkText}</a></p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result).toEqual([]);
+  });
+
+  it("URL 링크가 문장에 포함되면 링크 글도 함께 수집한다", () => {
+    mount(
+      `<main><p>Read <a href="https://example.com/docs">https://example.com/docs</a> for details.</p></main>`,
+    );
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Read https://example.com/docs for details."]);
+  });
+
   // R3·R7: 강조·인라인 코드도 문장에 포함하며, 합친 뒤 공백을 정리
   it.each(["em", "strong", "code"])("%s 안팎의 글을 공백과 함께 이어 붙인다", (tag) => {
     mount(`<main><p>  Run\n <${tag}>npm start</${tag}>\t now.  </p></main>`);
@@ -92,6 +114,22 @@ describe("문장 묶기", () => {
     const result = collectTextForTranslation(document);
 
     expect(result.map(({ text }) => text)).toEqual(["Run npm start now."]);
+  });
+
+  it("인라인 code만 있는 글은 수집하지 않는다", () => {
+    mount(`<main><p><code>npm start</code></p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result).toEqual([]);
+  });
+
+  it("인라인 code로 시작해도 뒤에 일반 텍스트가 있으면 함께 수집한다", () => {
+    mount(`<main><p><code>fetch()</code> returns a promise.</p></main>`);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["fetch() returns a promise."]);
   });
 
   // R3: 요소 사이에 따로 놓인 공백도 문장에 포함
@@ -399,6 +437,19 @@ describe("translate 상속과 재지정", () => {
   });
 
   // R3·R6: 제외한 인라인 글의 노드가 결과에 섞이지 않고 나머지는 문장으로 유지
+  // Google 번역과 Chrome 번역이 따르는 관례. 검색 결과의 URL(cite)이 이렇게 표시된다.
+  it("class=notranslate 영역과 그 자손을 제외한다", () => {
+    mount(`
+      <main><p>Title</p><div class="result notranslate">
+        <cite style="display:block">https://nodejs.org › <span translate="yes">docs</span></cite>
+      </div><p>After</p></main>
+    `);
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Title", "After"]);
+  });
+
   it("translate=no인 인라인 글을 제외하고 원본 노드 참조를 유지한다", () => {
     mount(`<main><p>Hello <span translate="no">private </span>world!</p></main>`);
     const paragraph = document.querySelector("p")!;
