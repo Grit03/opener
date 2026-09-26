@@ -225,6 +225,9 @@ const EXCLUDED_SELECTOR = [
   "template",
   // 화면에서는 숨기고 보조 기술에만 제공하는 글
   ".sr-only",
+  // 본문 안에 있는 현재 위치와 페이지 이동 영역
+  '[aria-label="Breadcrumb"]',
+  '[aria-label="pagination"]',
   // 입력·조작 요소
   "textarea",
   "select",

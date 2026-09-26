@@ -317,6 +317,26 @@ describe("CSS 배치로 나누기", () => {
 });
 
 describe("번역하지 않을 영역 제외", () => {
+  it('aria-label="Breadcrumb"인 경로 표시와 그 자손의 글을 제외한다', () => {
+    mount(
+      `<main><article><nav aria-label="Breadcrumb"><a href="/">App Router</a><span>Installation</span></nav><p>Article body</p></article></main>`,
+    );
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Article body"]);
+  });
+
+  it('aria-label="pagination"인 페이지 이동 영역의 글을 제외한다', () => {
+    mount(
+      `<main><p>Article body</p><nav aria-label="pagination"><a href="?page=1">Previous</a><span>Page 2</span></nav></main>`,
+    );
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Article body"]);
+  });
+
   // R7·C3: 문서 정보·실행 코드는 CSS로 표시해도 본문에 포함하지 않음
   it.each([
     ["title", `<title style="display:block">Document title</title>`],
