@@ -17,7 +17,7 @@ export interface TranslationDisplayController {
 const TRANSLATION_TAG = "opener-translation";
 const INLINE_TRANSLATION_CLASS = "opener-translation--inline";
 const BLOCK_TRANSLATION_CLASS = "opener-translation--block";
-/** 형제로 번역을 끼워 넣으면 HTML 구조가 깨지는 요소. 번역을 요소 안에 넣는다. */
+/** 기준 요소가 아닌 원문의 태그 바로 뒤에 번역을 넣는 태그 */
 const INNER_TRANSLATION_TAGS: ReadonlySet<string> = new Set<UppercaseHtmlTagName>([
   "HTML",
   "BODY",
@@ -119,9 +119,8 @@ function groupByAnchor(sources: SourceText[]): Map<Element, SourceText[]> {
 
 /**
  * 번역 요소를 넣고 성공 여부를 돌려준다.
- * 일반 요소는 기준 요소 바로 뒤에 넣는다. 목록·표 요소는 형제로 넣으면 HTML이 깨지므로
- * 요소 안에서 원문을 품은 직계 자식 뒤에 넣는다. 맨 끝에 넣으면 하위 목록 뒤로 밀리고,
- * 원문 텍스트 바로 뒤에 넣으면 링크 안에 들어가기 때문이다.
+ * 일반 요소는 기준 요소 안의 맨 끝에 넣는다. 목록·표 요소는 원문을 품은 직계 자식 뒤에 넣는다.
+ * 맨 끝에 넣으면 하위 목록 뒤로 밀리고, 원문 텍스트 바로 뒤에 넣으면 링크 안에 들어가기 때문이다.
  *
  * 예:
  * <li>                                 ← anchor
@@ -131,7 +130,7 @@ function groupByAnchor(sources: SourceText[]): Map<Element, SourceText[]> {
  */
 function insertTranslation({ anchor, sourceNodes }: SourceText, translation: HTMLElement): boolean {
   if (!INNER_TRANSLATION_TAGS.has(anchor.tagName)) {
-    anchor.after(translation);
+    anchor.append(translation);
     return translation.isConnected;
   }
 
