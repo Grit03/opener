@@ -573,6 +573,16 @@ describe("목표 언어로 쓰인 글 제외", () => {
 });
 
 describe("화면에 보이지 않는 글 제외", () => {
+  it("sr-only 영역과 그 자손의 글을 제외한다", () => {
+    mount(
+      `<main><p>Before</p><div class="sr-only">Hidden <span>description</span></div><p>After</p></main>`,
+    );
+
+    const result = collectTextForTranslation(document);
+
+    expect(result.map(({ text }) => text)).toEqual(["Before", "After"]);
+  });
+
   // R8: 계산된 스타일로 보이지 않는 글은 자신과 조상 어느 쪽에서 숨겨도 제외
   it.each([
     ["hidden", `<p hidden>Hidden attribute</p>`],

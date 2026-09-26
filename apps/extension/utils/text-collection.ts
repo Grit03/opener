@@ -223,6 +223,8 @@ const EXCLUDED_SELECTOR = [
   "style",
   "noscript",
   "template",
+  // 화면에서는 숨기고 보조 기술에만 제공하는 글
+  ".sr-only",
   // 입력·조작 요소
   "textarea",
   "select",
