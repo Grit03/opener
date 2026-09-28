@@ -1,6 +1,6 @@
 import { isValidNativeHostRequest } from "@opener/protocol";
 import { describe, expect, test } from "vitest";
-import { parseTranslationResult } from "../src/translate.ts";
+import { parseTranslationResult } from "../src/translation/translator.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
 describe("네이티브 호스트 요청 타입 검증", () => {

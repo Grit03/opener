@@ -5,7 +5,7 @@ import { createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, onTestFinished, test } from "vitest";
-import { encodeNativeMessage, readNativeMessages } from "../src/native-messaging.ts";
+import { encodeNativeMessage, readNativeMessages } from "../src/utils/native-messaging.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
 test.skipIf(process.platform === "win32").each([

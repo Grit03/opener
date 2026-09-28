@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { runCli } from "./run-cli.ts";
-import type { CliAdapter } from "./translate.ts";
+import { runCli } from "../utils/run-cli.ts";
+import type { CliAdapter } from "./translator.ts";
 
 const resultSchemaPath = fileURLToPath(
   new URL("./translation-result.schema.json", import.meta.url),

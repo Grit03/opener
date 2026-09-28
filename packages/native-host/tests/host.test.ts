@@ -2,7 +2,7 @@ import { PassThrough } from "node:stream";
 import { expect, expectTypeOf, onTestFinished, test } from "vitest";
 import type { NativeHostResponse, TranslateRequest } from "@opener/protocol";
 import { NativeHost } from "../src/host.ts";
-import { encodeNativeMessage, readNativeMessages } from "../src/native-messaging.ts";
+import { encodeNativeMessage, readNativeMessages } from "../src/utils/native-messaging.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
 function startHost(handler: (request: TranslateRequest) => Promise<NativeHostResponse>) {

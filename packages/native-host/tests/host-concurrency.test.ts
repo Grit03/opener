@@ -3,7 +3,7 @@ import { PassThrough } from "node:stream";
 import type { NativeHostRequest, NativeHostResponse } from "@opener/protocol";
 import { expect, onTestFinished, test } from "vitest";
 import { NativeHost } from "../src/host.ts";
-import { encodeNativeMessage, readNativeMessages } from "../src/native-messaging.ts";
+import { encodeNativeMessage, readNativeMessages } from "../src/utils/native-messaging.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
 function startHost(handler: (request: NativeHostRequest) => Promise<NativeHostResponse>) {

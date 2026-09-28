@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, onTestFinished, test } from "vitest";
-import { encodeNativeMessage, readNativeMessages } from "../src/native-messaging.ts";
-import { runCli } from "../src/run-cli.ts";
+import { encodeNativeMessage, readNativeMessages } from "../src/utils/native-messaging.ts";
+import { runCli } from "../src/utils/run-cli.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
 function createInvocation(script: string, cancellation = new AbortController()) {

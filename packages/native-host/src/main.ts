@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { NativeHost } from "./host.ts";
-import { translate } from "./translate.ts";
+import { translate } from "./translation/translator.ts";
 
 const host = new NativeHost(process.stdin, process.stdout);
 const MAX_ACTIVE_TRANSLATIONS = 4;
