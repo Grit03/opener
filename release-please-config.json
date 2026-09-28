@@ -6,6 +6,18 @@
       "package-name": "@opener/extension",
       "initial-version": "0.1.0",
       "bump-minor-pre-major": true
+    },
+    "packages/native-host": {
+      "release-type": "node",
+      "package-name": "@opener/native-host",
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true
+    },
+    "packages/protocol": {
+      "release-type": "node",
+      "package-name": "@opener/protocol",
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true
     }
   }
 }

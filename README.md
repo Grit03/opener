@@ -6,7 +6,7 @@ Opener는 사용자 컴퓨터에 설치된 AI CLI를 통해 웹 페이지를 번
 - 인증은 CLI의 기존 로그인 설정을 따릅니다. 확장은 API 키나 로그인 토큰을 직접 읽거나 저장하지 않습니다.
 - native host에는 연결을 허용할 확장 ID를 등록합니다. 브라우저가 이 ID를 확인하므로 확장과 호스트 사이에 별도의 인증 토큰을 두지 않습니다.
 
-현재는 확장의 기본 구성과 브라우저 테스트 환경을 갖춘 단계입니다. 번역 기능과 native host는 아직 구현 전이며, 아래는 구현할 구조와 처리 방식입니다. CLI 호출 예시는 `claude`를 기준으로 작성했습니다.
+현재는 확장의 기본 구성과 브라우저 테스트 환경, Claude·Codex를 호출하는 native host를 구현한 단계입니다. 확장의 번역 기능과 host 연결은 아직 구현 전입니다. 아래는 전체 구조와 처리 방식이며, CLI 호출 예시는 `claude`를 기준으로 작성했습니다. host 실행과 검증 방법은 [native host 안내](packages/native-host/README.md)를 참고합니다.
 
 ## 구성요소
 
@@ -68,7 +68,7 @@ sequenceDiagram
   B-->>C: 캐시에 있는 번역문 반환
   B->>B: 캐시에 없는 세그먼트를 모아 배치 구성
   par 동시 실행 수를 제한하여 배치 처리
-    B->>H: translate.request (batchId, 대상 언어, 세그먼트)
+    B->>H: translate.request (대상 언어, 세그먼트)
     H->>L: claude -p 프로세스 실행
     L-->>H: JSON 응답
     H-->>B: translate.result + log
@@ -96,10 +96,12 @@ sequenceDiagram
 apps/
   extension/     WXT + React 브라우저 확장
   web/           Next.js 소개 사이트
-packages/        native-host, protocol 패키지를 추가할 예정
+packages/
+  native-host/   native messaging 입출력, Claude·Codex 호출 및 결과 검증
+  protocol/      확장과 native host가 공유하는 메시지 타입 및 요청 검증
 ```
 
-`packages/protocol`은 확장과 native host에서 함께 사용하는 타입이 필요해질 때 추가합니다.
+두 패키지는 독립적으로 버전을 관리합니다. native host는 Node.js 표준 모듈만 사용하며, 요청마다 CLI 프로세스를 새로 실행합니다.
 
 ## 개발
 
@@ -111,7 +113,7 @@ nvm use
 pnpm install
 pnpm dev:ext        # 확장 개발 서버
 pnpm dev:web        # 웹 개발 서버
-pnpm test           # Chromium에서 Vitest 테스트 실행
+pnpm test           # Vitest로 확장(Chromium)과 native host(Node.js) 테스트 실행
 ```
 
 디렉터리 진입 시 Node 버전을 자동으로 전환하려면 [nvm의 zsh 자동 전환 설정](https://github.com/nvm-sh/nvm#zsh)을 사용합니다.
