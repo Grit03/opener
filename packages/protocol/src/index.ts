@@ -5,7 +5,6 @@ export interface Segment {
 
 export interface TranslateRequest {
   type: "translate.request";
-  batchId: string;
   provider: "claude" | "codex";
   targetLanguage: string;
   segments: Segment[];
@@ -16,10 +15,9 @@ export interface TranslationResult {
 }
 
 export type TranslateResponse =
-  | ({ type: "translate.result"; batchId: string } & TranslationResult)
+  | ({ type: "translate.result" } & TranslationResult)
   | {
       type: "translate.error";
-      batchId: string | null;
       code: "INVALID_REQUEST" | "BUSY" | "TRANSLATION_FAILED";
       message: string;
     };
@@ -58,7 +56,6 @@ export function parseTranslateRequest(value: unknown): TranslateRequest {
   if (
     !isNonArrayObject(value) ||
     value.type !== "translate.request" ||
-    !isNonEmptyString(value.batchId) ||
     (value.provider !== "claude" && value.provider !== "codex") ||
     !isNonEmptyString(value.targetLanguage)
   ) {
@@ -67,7 +64,6 @@ export function parseTranslateRequest(value: unknown): TranslateRequest {
 
   return {
     type: "translate.request",
-    batchId: value.batchId,
     provider: value.provider,
     targetLanguage: value.targetLanguage,
     segments: parseSegments(value.segments),

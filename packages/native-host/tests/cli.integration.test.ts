@@ -95,14 +95,13 @@ test.skipIf(process.platform === "win32").each(["claude", "codex"] as const)(
     });
     const responses = readNativeMessages(host.stdout);
 
-    host.stdin.write(encodeNativeMessage(createRequest({ provider, batchId: provider })));
+    host.stdin.write(encodeNativeMessage(createRequest({ provider })));
     const response = await responses.next();
     host.stdin.end();
     const [exitCode] = await closed;
 
     expect(response.value).toStrictEqual({
       type: "translate.result",
-      batchId: provider,
       ...createResult(),
     });
     expect(exitCode).toBe(0);

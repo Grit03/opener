@@ -35,37 +35,34 @@ test("rejects an invalid request and continues serving the connection", async ()
 
   expect(invalid.value).toMatchObject({
     type: "translate.error",
-    batchId: "batch-1",
     code: "INVALID_REQUEST",
   });
   expect(valid.value).toStrictEqual({
     type: "translate.result",
-    batchId: "batch-1",
     ...createResult(),
   });
 });
 
-test("correlates responses by batch id when the second translation finishes first", async () => {
+test("같은 내용의 요청도 병렬 처리하고 먼저 완료된 응답을 보낸다", async () => {
   const release = new EventEmitter();
-  const { input, responses } = startHost(async (request, signal) => {
-    if (request.batchId === "first") await once(release, "first", { signal });
+  let started = 0;
+  const { input, responses } = startHost(async (_request, signal) => {
+    started += 1;
+    if (started === 1) await once(release, "first", { signal });
     return createResult();
   });
 
-  input.write(encodeNativeMessage(createRequest({ batchId: "first" })));
-  input.write(encodeNativeMessage(createRequest({ batchId: "second" })));
-  const second = await responses.next();
-  release.emit("first");
-  const first = await responses.next();
-
-  expect(second.value).toStrictEqual({
+  input.write(encodeNativeMessage(createRequest()));
+  input.write(encodeNativeMessage(createRequest()));
+  expect((await responses.next()).value).toStrictEqual({
     type: "translate.result",
-    batchId: "second",
     ...createResult(),
   });
-  expect(first.value).toStrictEqual({
+  expect(started).toBe(2);
+
+  release.emit("first");
+  expect((await responses.next()).value).toStrictEqual({
     type: "translate.result",
-    batchId: "first",
     ...createResult(),
   });
 });
@@ -80,7 +77,6 @@ test("returns a per-request error without exposing translation failure details",
 
   expect(response.value).toMatchObject({
     type: "translate.error",
-    batchId: "batch-1",
     code: "TRANSLATION_FAILED",
   });
   expect(JSON.stringify(response.value)).not.toContain("PRIVATE_PAGE_TEXT");
@@ -92,14 +88,13 @@ test("returns BUSY for a fifth request while four translations are pending", asy
     return createResult();
   });
 
-  for (const batchId of ["first", "second", "third", "fourth", "overflow"]) {
-    input.write(encodeNativeMessage(createRequest({ batchId })));
+  for (let index = 0; index < 5; index += 1) {
+    input.write(encodeNativeMessage(createRequest()));
   }
   const response = await responses.next();
 
   expect(response.value).toMatchObject({
     type: "translate.error",
-    batchId: "overflow",
     code: "BUSY",
   });
 });
@@ -114,8 +109,8 @@ test("aborts all active translations when the browser disconnects", async () => 
     return createResult();
   });
   const ready = once(started, "ready");
-  for (const batchId of ["first", "second", "third", "fourth"]) {
-    input.write(encodeNativeMessage(createRequest({ batchId })));
+  for (let index = 0; index < 4; index += 1) {
+    input.write(encodeNativeMessage(createRequest()));
   }
   await ready;
 

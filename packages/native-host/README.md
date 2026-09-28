@@ -21,14 +21,13 @@ pnpm test --project native-host
 ```json
 {
   "type": "translate.request",
-  "batchId": "batch-1",
   "provider": "claude",
   "targetLanguage": "ko",
   "segments": [{ "id": "title", "text": "Hello" }]
 }
 ```
 
-`provider`는 `claude` 또는 `codex`다. 성공 응답에는 같은 `batchId`와 `translations` 배열을 담는다. 실패 응답에는 `translate.error` 타입과 `code`, `message`를 담으며, 유효한 배치 ID가 없는 요청은 `batchId: null`로 응답한다.
+`provider`는 `claude` 또는 `codex`다. 성공 응답에는 `translate.result` 타입과 `translations` 배열을 담는다. 번역 실패 응답에는 `translate.error` 타입과 `code`, `message`를 담는다.
 
 ## 동작 범위
 
@@ -37,7 +36,7 @@ pnpm test --project native-host
 - 요청마다 빈 임시 작업 디렉터리를 만들고 종료 후 삭제한다. 원문은 stdin으로 전달하며 세션 저장을 끈다. 이는 AI 서비스 측의 데이터 보관까지 제어한다는 뜻은 아니다.
 - Claude는 도구와 사용자 커스터마이징을 끈다. Codex는 사용자 설정, 셸 도구, 웹 검색, 앱, 플러그인, 훅, 서브에이전트를 끄고 읽기 전용 샌드박스를 사용한다. Codex의 모든 기본 도구가 제거된다는 보장은 하지 않는다.
 - CLI 제한 시간은 120초, stdout/stderr 한도는 각각 1 MiB다. 브라우저 연결 종료나 host의 SIGINT/SIGTERM을 받으면 실행 중인 직접 자식 CLI를 종료한다. host의 강제 종료(SIGKILL)까지 처리하지는 못한다.
-- 메시지 본문은 양방향 1 MiB로 제한한다. 동시 요청은 최대 4개이며, 초과 요청과 실행 중인 배치 ID의 재사용에는 `BUSY`를 반환한다.
+- 메시지 본문은 양방향 1 MiB로 제한한다. 동시 번역은 최대 4개이며, 초과 요청에는 `BUSY`를 반환한다.
 - 옵션은 Claude Code 2.1.258, Codex CLI 0.154.0의 도움말을 기준으로 구성했다. 다른 버전의 호환성과 실제 모델 응답은 별도 검증이 필요하다. 자동 재시도는 하지 않는다.
 
 CLI 옵션 근거: [Claude CLI reference](https://code.claude.com/docs/en/cli-reference), [공식 OpenAI 설정 문서](https://developers.openai.com/codex/config-reference).

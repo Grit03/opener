@@ -1,6 +1,4 @@
 import {
-  isNonEmptyString,
-  isNonArrayObject,
   parseTranslateRequest,
   type TranslateRequest,
   type TranslateResponse,
@@ -19,7 +17,7 @@ async function translateRequest(
 ): Promise<void> {
   try {
     const result = await translate(request, signal);
-    const response = { type: "translate.result", batchId: request.batchId, ...result };
+    const response = { type: "translate.result", ...result };
     // Include the response envelope when checking the browser's message limit.
     if (!signal.aborted) {
       await writeNativeMessage(output, response);
@@ -27,7 +25,6 @@ async function translateRequest(
   } catch {
     const response = {
       type: "translate.error",
-      batchId: request.batchId,
       code: "TRANSLATION_FAILED",
       message: "Translation failed. Check CLI installation, login, and response format.",
     };
@@ -44,7 +41,7 @@ export async function serveNativeHost(
   signal: AbortSignal,
 ): Promise<void> {
   const connection = new AbortController();
-  const activeRequests = new Map<string, Promise<void>>();
+  const activeRequests = new Set<Promise<void>>();
   const disconnect = () => connection.abort();
   const stopReading = () => input.destroy();
   const handleOutputError = (error: Error) => {
@@ -63,35 +60,31 @@ export async function serveNativeHost(
       try {
         request = parseTranslateRequest(message);
       } catch {
-        const batchId =
-          isNonArrayObject(message) && isNonEmptyString(message.batchId) ? message.batchId : null;
         await writeNativeMessage(output, {
           type: "translate.error",
-          batchId,
           code: "INVALID_REQUEST",
           message: "Expected a provider, target language, and segments with unique ids.",
         } satisfies TranslateResponse);
         continue;
       }
 
-      if (activeRequests.size >= MAX_ACTIVE_REQUESTS || activeRequests.has(request.batchId)) {
+      if (activeRequests.size >= MAX_ACTIVE_REQUESTS) {
         await writeNativeMessage(output, {
           type: "translate.error",
-          batchId: request.batchId,
           code: "BUSY",
-          message: "Too many active requests or a duplicate batch id.",
+          message: "Too many active requests.",
         } satisfies TranslateResponse);
         continue;
       }
 
       const task = translateRequest(request, translate, output, connection.signal)
         .catch(handleOutputError)
-        .finally(() => activeRequests.delete(request.batchId));
-      activeRequests.set(request.batchId, task);
+        .finally(() => activeRequests.delete(task));
+      activeRequests.add(task);
     }
   } finally {
     connection.abort();
-    await Promise.all(activeRequests.values());
+    await Promise.all(activeRequests);
     input.removeListener("end", disconnect);
     input.removeListener("close", disconnect);
     output.removeListener("error", handleOutputError);

@@ -3,7 +3,6 @@ import type { TranslateRequest, TranslationResult } from "@opener/protocol";
 export function createRequest(overrides: Partial<TranslateRequest> = {}): TranslateRequest {
   return {
     type: "translate.request",
-    batchId: "batch-1",
     provider: "claude",
     targetLanguage: "ko",
     segments: [{ id: "title", text: "Hello" }],

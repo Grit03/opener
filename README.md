@@ -68,7 +68,7 @@ sequenceDiagram
   B-->>C: 캐시에 있는 번역문 반환
   B->>B: 캐시에 없는 세그먼트를 모아 배치 구성
   par 동시 실행 수를 제한하여 배치 처리
-    B->>H: translate.request (batchId, 대상 언어, 세그먼트)
+    B->>H: translate.request (대상 언어, 세그먼트)
     H->>L: claude -p 프로세스 실행
     L-->>H: JSON 응답
     H-->>B: translate.result + log
