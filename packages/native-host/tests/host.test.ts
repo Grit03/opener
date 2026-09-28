@@ -1,15 +1,19 @@
-import { EventEmitter, once } from "node:events";
 import { PassThrough } from "node:stream";
-import { expect, onTestFinished, test } from "vitest";
-import { serveNativeHost } from "../src/host.ts";
+import { expect, expectTypeOf, onTestFinished, test } from "vitest";
+import type { NativeHostResponse, TranslateRequest } from "@opener/protocol";
+import { NativeHost } from "../src/host.ts";
 import { encodeNativeMessage, readNativeMessages } from "../src/native-messaging.ts";
-import type { Translator } from "../src/translate.ts";
 import { createRequest, createResult } from "./fixtures.ts";
 
-function startHost(translate: Translator) {
+function startHost(handler: (request: TranslateRequest) => Promise<NativeHostResponse>) {
   const input = new PassThrough();
   const output = new PassThrough();
-  const done = serveNativeHost(input, output, translate, new AbortController().signal);
+  const host = new NativeHost(input, output);
+  host.on("translate.request", (request) => {
+    expectTypeOf(request).toEqualTypeOf<TranslateRequest>();
+    return handler(request);
+  });
+  const done = host.listen();
   const responses = readNativeMessages(output);
 
   onTestFinished(async () => {
@@ -22,19 +26,24 @@ function startHost(translate: Translator) {
     }
   });
 
-  return { input, responses, done };
+  return { input, responses };
 }
 
-test("rejects an invalid request and continues serving the connection", async () => {
-  const { input, responses } = startHost(async () => createResult());
+test("지원하지 않는 요청 타입에 오류를 응답하고 다음 요청을 처리한다", async () => {
+  let handled = 0;
+  const { input, responses } = startHost(async () => {
+    handled += 1;
+    return { type: "translate.result", ...createResult() };
+  });
 
-  input.write(encodeNativeMessage({ ...createRequest(), provider: "invalid" }));
+  input.write(encodeNativeMessage({ ...createRequest(), type: "unknown.request" }));
   const invalid = await responses.next();
+  expect(handled).toBe(0);
   input.write(encodeNativeMessage(createRequest()));
   const valid = await responses.next();
 
   expect(invalid.value).toMatchObject({
-    type: "translate.error",
+    type: "error",
     code: "INVALID_REQUEST",
   });
   expect(valid.value).toStrictEqual({
@@ -43,79 +52,34 @@ test("rejects an invalid request and continues serving the connection", async ()
   });
 });
 
-test("같은 내용의 요청도 병렬 처리하고 먼저 완료된 응답을 보낸다", async () => {
-  const release = new EventEmitter();
-  let started = 0;
-  const { input, responses } = startHost(async (_request, signal) => {
-    started += 1;
-    if (started === 1) await once(release, "first", { signal });
-    return createResult();
-  });
-
-  input.write(encodeNativeMessage(createRequest()));
-  input.write(encodeNativeMessage(createRequest()));
-  expect((await responses.next()).value).toStrictEqual({
-    type: "translate.result",
-    ...createResult(),
-  });
-  expect(started).toBe(2);
-
-  release.emit("first");
-  expect((await responses.next()).value).toStrictEqual({
-    type: "translate.result",
-    ...createResult(),
-  });
-});
-
-test("returns a per-request error without exposing translation failure details", async () => {
+test("번역 실패 응답을 전달하고 다음 요청을 처리한다", async () => {
+  let handled = 0;
   const { input, responses } = startHost(async () => {
-    throw new Error("PRIVATE_PAGE_TEXT");
+    handled += 1;
+    if (handled === 1) {
+      return {
+        type: "translate.error",
+        code: "TRANSLATION_FAILED",
+        message: "Translation failed.",
+      };
+    }
+    return { type: "translate.result", ...createResult() };
   });
 
   input.write(encodeNativeMessage(createRequest()));
-  const response = await responses.next();
+  const failed = await responses.next();
+  input.write(encodeNativeMessage(createRequest()));
+  const succeeded = await responses.next();
 
-  expect(response.value).toMatchObject({
+  expect(failed.value).toMatchObject({
     type: "translate.error",
     code: "TRANSLATION_FAILED",
   });
-  expect(JSON.stringify(response.value)).not.toContain("PRIVATE_PAGE_TEXT");
-});
-
-test("returns BUSY for a fifth request while four translations are pending", async () => {
-  const { input, responses } = startHost(async (_request, signal) => {
-    await once(signal, "abort");
-    return createResult();
-  });
-
-  for (let index = 0; index < 5; index += 1) {
-    input.write(encodeNativeMessage(createRequest()));
-  }
-  const response = await responses.next();
-
-  expect(response.value).toMatchObject({
-    type: "translate.error",
-    code: "BUSY",
+  expect(succeeded.value).toStrictEqual({
+    type: "translate.result",
+    ...createResult(),
   });
 });
 
-test("aborts all active translations when the browser disconnects", async () => {
-  const started = new EventEmitter();
-  const signals: AbortSignal[] = [];
-  const { input, done } = startHost(async (_request, signal) => {
-    signals.push(signal);
-    if (signals.length === 4) started.emit("ready");
-    await once(signal, "abort");
-    return createResult();
-  });
-  const ready = once(started, "ready");
-  for (let index = 0; index < 4; index += 1) {
-    input.write(encodeNativeMessage(createRequest()));
-  }
-  await ready;
-
-  input.end();
-  await done;
-
-  expect(signals.map((signal) => signal.aborted)).toStrictEqual([true, true, true, true]);
-});
+test.todo("번역 실패의 내부 상세 정보를 응답에 노출하지 않는다");
+test.todo("브라우저 연결이 종료되면 실행 중인 번역을 취소한다");

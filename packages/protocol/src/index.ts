@@ -1,8 +1,32 @@
-export interface Segment {
-  id: string;
-  text: string;
+/*
+ * ==========================================
+ *                Native Host
+ * ==========================================
+ */
+
+export type NativeHostRequest = TranslateRequest | { type: "ping" };
+export type NativeHostResponse = NativeHostErrorResponse | TranslateResponse;
+
+export type NativeHostErrorResponse = {
+  type: "error";
+  code: "INVALID_REQUEST" | "HANDLER_FAILED";
+  message: string;
+};
+
+export function isValidNativeHostRequest(message: unknown): message is NativeHostRequest {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    (message.type === "translate.request" || message.type === "ping")
+  );
 }
 
+/*
+ * ==========================================
+ *                Translation
+ * ==========================================
+ */
 export interface TranslateRequest {
   type: "translate.request";
   provider: "claude" | "codex";
@@ -14,6 +38,11 @@ export interface TranslationResult {
   translations: Segment[];
 }
 
+export interface Segment {
+  id: string;
+  text: string;
+}
+
 export type TranslateResponse =
   | ({ type: "translate.result" } & TranslationResult)
   | {
@@ -21,14 +50,6 @@ export type TranslateResponse =
       code: "INVALID_REQUEST" | "BUSY" | "TRANSLATION_FAILED";
       message: string;
     };
-
-export function isNonArrayObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
 
 export function parseSegments(value: unknown): Segment[] {
   if (!Array.isArray(value) || value.length === 0) {
@@ -52,20 +73,15 @@ export function parseSegments(value: unknown): Segment[] {
   });
 }
 
-export function parseTranslateRequest(value: unknown): TranslateRequest {
-  if (
-    !isNonArrayObject(value) ||
-    value.type !== "translate.request" ||
-    (value.provider !== "claude" && value.provider !== "codex") ||
-    !isNonEmptyString(value.targetLanguage)
-  ) {
-    throw new Error("Invalid translation request.");
-  }
+/*
+ * ==========================================
+ *                Utilities
+ * ==========================================
+ */
+export function isNonArrayObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-  return {
-    type: "translate.request",
-    provider: value.provider,
-    targetLanguage: value.targetLanguage,
-    segments: parseSegments(value.segments),
-  };
+export function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

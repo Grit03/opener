@@ -1,93 +1,123 @@
-import {
-  parseTranslateRequest,
-  type TranslateRequest,
-  type TranslateResponse,
-} from "@opener/protocol";
 import type { Readable, Writable } from "node:stream";
-import { readNativeMessages, writeNativeMessage } from "./native-messaging.ts";
-import type { Translator } from "./translate.ts";
+import { readNativeMessages, ResponseError, writeNativeMessage } from "./native-messaging.ts";
+import {
+  isValidNativeHostRequest,
+  type NativeHostRequest,
+  type NativeHostResponse,
+} from "@opener/protocol";
 
-const MAX_ACTIVE_REQUESTS = 4;
+export class NativeHost {
+  private readonly input: Readable;
+  private readonly output: Writable;
+  private state: "ready" | "listening" | "closed" = "ready";
+  private readonly handlers = new Map<
+    string,
+    (request: NativeHostRequest) => Promise<NativeHostResponse>
+  >();
 
-async function translateRequest(
-  request: TranslateRequest,
-  translate: Translator,
-  output: Writable,
-  signal: AbortSignal,
-): Promise<void> {
-  try {
-    const result = await translate(request, signal);
-    const response = { type: "translate.result", ...result };
-    // Include the response envelope when checking the browser's message limit.
-    if (!signal.aborted) {
-      await writeNativeMessage(output, response);
+  constructor(input: Readable, output: Writable) {
+    this.input = input;
+    this.output = output;
+  }
+
+  on<Type extends NativeHostRequest["type"]>(
+    type: Type,
+    handler: (request: Extract<NativeHostRequest, { type: Type }>) => Promise<NativeHostResponse>,
+  ): this {
+    const matchesType = (
+      request: NativeHostRequest,
+    ): request is Extract<NativeHostRequest, { type: Type }> => request.type === type;
+
+    this.handlers.set(type, async (request) => {
+      if (!matchesType(request)) {
+        throw new Error(`Unexpected request type: ${request.type}`);
+      }
+      return handler(request);
+    });
+    return this;
+  }
+
+  async listen(): Promise<void> {
+    if (this.state !== "ready") {
+      throw new Error(`Cannot start native host in state: ${this.state}`);
     }
-  } catch {
-    const response = {
-      type: "translate.error",
-      code: "TRANSLATION_FAILED",
-      message: "Translation failed. Check CLI installation, login, and response format.",
-    };
-    if (!signal.aborted) {
-      await writeNativeMessage(output, response);
+    this.state = "listening";
+    this.addListeners();
+
+    // 메세지 읽기
+    try {
+      for await (const message of readNativeMessages(this.input)) {
+        if (this.state !== "listening") break;
+        void this.handleMessage(message).catch(this.handleError);
+      }
+    } catch (error) {
+      this.handleError(error);
+    } finally {
+      this.close();
     }
   }
-}
 
-export async function serveNativeHost(
-  input: Readable,
-  output: Writable,
-  translate: Translator,
-  signal: AbortSignal,
-): Promise<void> {
-  const connection = new AbortController();
-  const activeRequests = new Set<Promise<void>>();
-  const disconnect = () => connection.abort();
-  const stopReading = () => input.destroy();
-  const handleOutputError = (error: Error) => {
-    input.destroy(error);
+  private async handleMessage(message: unknown) {
+    if (!isValidNativeHostRequest(message)) {
+      this.send({
+        type: "error",
+        code: "INVALID_REQUEST",
+        message: "Received an invalid request.",
+      });
+
+      return;
+    }
+
+    const handler = this.handlers.get(message.type);
+
+    if (!handler) {
+      this.send({
+        type: "error",
+        code: "INVALID_REQUEST",
+        message: "No handler registered for request type: " + message.type,
+      });
+      return;
+    }
+
+    const response = await handler(message);
+    this.send(response);
+  }
+
+  private close = () => {
+    this.state = "closed";
+
+    this.input.removeListener("end", this.close);
+    this.input.removeListener("close", this.close);
   };
 
-  input.once("end", disconnect);
-  input.once("close", disconnect);
-  output.once("error", handleOutputError);
-  signal.addEventListener("abort", stopReading, { once: true });
-
-  try {
-    signal.throwIfAborted();
-    for await (const message of readNativeMessages(input)) {
-      let request: TranslateRequest;
-      try {
-        request = parseTranslateRequest(message);
-      } catch {
-        await writeNativeMessage(output, {
-          type: "translate.error",
-          code: "INVALID_REQUEST",
-          message: "Expected a provider, target language, and segments with unique ids.",
-        } satisfies TranslateResponse);
-        continue;
-      }
-
-      if (activeRequests.size >= MAX_ACTIVE_REQUESTS) {
-        await writeNativeMessage(output, {
-          type: "translate.error",
-          code: "BUSY",
-          message: "Too many active requests.",
-        } satisfies TranslateResponse);
-        continue;
-      }
-
-      const task = translateRequest(request, translate, output, connection.signal)
-        .catch(handleOutputError)
-        .finally(() => activeRequests.delete(task));
-      activeRequests.add(task);
-    }
-  } finally {
-    connection.abort();
-    await Promise.all(activeRequests);
-    input.removeListener("end", disconnect);
-    input.removeListener("close", disconnect);
-    output.removeListener("error", handleOutputError);
-    signal.removeEventListener("abort", stopReading);
+  private addListeners() {
+    this.input.once("end", this.close);
+    this.input.once("close", this.close);
+    this.output.once("error", this.handleOutputError);
+    this.output.once("close", () => this.output.removeListener("error", this.handleOutputError));
   }
+
+  private send(response: NativeHostResponse) {
+    if (this.state !== "listening") return;
+    writeNativeMessage(this.output, response);
+  }
+
+  private handleOutputError = (error: Error) => {
+    this.state = "closed";
+    this.output.destroy(error);
+    this.input.destroy(error);
+    console.error(error.message);
+  };
+
+  private handleError = (error: unknown) => {
+    if (error instanceof ResponseError) {
+      this.send({
+        type: "error",
+        code: "INVALID_REQUEST",
+        message: error.message,
+      });
+    } else {
+      console.error("Unknown error occurred: ", error);
+    }
+  };
 }

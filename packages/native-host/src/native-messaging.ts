@@ -5,10 +5,23 @@ export const MAX_MESSAGE_BYTES = 1024 * 1024;
 const HEADER_BYTES = 4;
 const isLittleEndian = endianness() === "LE";
 
+export class ResponseError extends Error {
+  constructor(message: string, name: string) {
+    super(message);
+    this.name = name;
+  }
+}
+
+export class MessageTooLargeError extends ResponseError {
+  constructor() {
+    super("Native message exceeds the size limit.", "MessageTooLargeError");
+  }
+}
+
 export function encodeNativeMessage(message: unknown): Buffer {
   const body = Buffer.from(JSON.stringify(message), "utf8");
   if (body.length > MAX_MESSAGE_BYTES) {
-    throw new Error("Native message exceeds the size limit.");
+    throw new MessageTooLargeError();
   }
 
   const header = Buffer.alloc(HEADER_BYTES);
@@ -31,7 +44,7 @@ export async function* readNativeMessages(input: Readable): AsyncGenerator<unkno
         ? pendingBytes.readUInt32LE(0)
         : pendingBytes.readUInt32BE(0);
       if (bodyLength === 0 || bodyLength > MAX_MESSAGE_BYTES) {
-        throw new Error("Invalid native message length.");
+        throw new MessageTooLargeError();
       }
 
       const messageLength = HEADER_BYTES + bodyLength;
@@ -48,12 +61,7 @@ export async function* readNativeMessages(input: Readable): AsyncGenerator<unkno
   }
 }
 
-export async function writeNativeMessage(output: Writable, message: unknown): Promise<void> {
-  const frame = encodeNativeMessage(message);
-  await new Promise<void>((resolve, reject) => {
-    output.write(frame, (error) => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
+export function writeNativeMessage(output: Writable, message: unknown) {
+  const request = encodeNativeMessage(message);
+  output.write(request);
 }
