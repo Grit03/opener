@@ -5,7 +5,7 @@ interface CliInvocation {
   args: string[];
   input: string;
   cwd: string;
-  signal: AbortSignal;
+  signal?: AbortSignal;
   timeoutMilliseconds?: number;
 }
 
@@ -17,30 +17,27 @@ export function runCli({
   signal,
   timeoutMilliseconds = 120_000,
 }: CliInvocation): Promise<string> {
-  signal.throwIfAborted();
+  signal?.throwIfAborted();
+
+  const process_config = {
+    cwd,
+    signal,
+    timeout: timeoutMilliseconds,
+    killSignal: "SIGKILL",
+    maxBuffer: 1024 * 1024,
+    encoding: "utf8",
+    windowsHide: true,
+  } as const;
 
   return new Promise((resolve, reject) => {
-    const child = execFile(
-      command,
-      args,
-      {
-        cwd,
-        signal,
-        timeout: timeoutMilliseconds,
-        killSignal: "SIGKILL",
-        maxBuffer: 1024 * 1024,
-        encoding: "utf8",
-        windowsHide: true,
-      },
-      (error, stdout) => {
-        if (error) {
-          // CLI errors can contain page text in stdout or stderr.
-          reject(new Error("CLI execution failed. Check installation, login, and timeout."));
-          return;
-        }
-        resolve(stdout);
-      },
-    );
+    const child = execFile(command, args, process_config, (error, stdout) => {
+      if (error) {
+        // CLI errors can contain page text in stdout or stderr.
+        reject(new Error("CLI execution failed. Check installation, login, and timeout."));
+        return;
+      }
+      resolve(stdout);
+    });
 
     child.stdin!.on("error", () => {
       child.kill("SIGKILL");
