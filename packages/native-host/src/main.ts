@@ -1,11 +1,21 @@
 #!/usr/bin/env node
 
+import { create } from "domain";
 import { NativeHost } from "./host.ts";
-import { translate } from "./translation/translator.ts";
+import { createTranslator } from "./translation/translator.ts";
+import type { CliAdapterMap } from "./translation/types.ts";
+import { runClaude } from "./translation/claude.ts";
+import { runCodex } from "./translation/codex.ts";
 
-const host = new NativeHost(process.stdin, process.stdout);
 const MAX_ACTIVE_TRANSLATIONS = 4;
 let activeTranslations = 0;
+
+const host = new NativeHost(process.stdin, process.stdout);
+
+const translator = createTranslator({
+  claude: runClaude,
+  codex: runCodex,
+} as const satisfies CliAdapterMap);
 
 host.on("translate.request", async (request) => {
   // TODO: provider, targetLanguage, segments를 검증하고 잘못된 요청에 INVALID_REQUEST를 반환한다.
@@ -21,7 +31,7 @@ host.on("translate.request", async (request) => {
   activeTranslations += 1;
   try {
     // TODO: AbortController를 호스트 연결 종료와 연결해 실행 중인 번역을 취소한다.
-    const result = await translate(request, new AbortController().signal);
+    const result = await translator(request, new AbortController().signal);
     return { type: "translate.result", ...result };
   } catch (error) {
     return {
