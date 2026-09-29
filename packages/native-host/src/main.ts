@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { create } from "domain";
 import { NativeHost } from "./host.ts";
 import { createTranslator } from "./translation/translator.ts";
 import type { CliAdapterMap } from "./translation/types.ts";
