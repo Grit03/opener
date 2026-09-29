@@ -90,14 +90,14 @@ function findOutermostContentAreas(body: HTMLElement, tag: ContentAreaTag): HTML
 function collectTextWithin(contentArea: Element): SourceText[] {
   const collected: SourceText[] = [];
   let pendingAnchor: Element = contentArea;
-  let pendingTexts: Text[] = [];
+  let pendingTextNodes: Text[] = [];
 
   const finishPendingText = () => {
-    const text = getTextforTranslation(pendingTexts);
+    const text = getTextforTranslation(pendingTextNodes);
     if (text !== null) {
-      collected.push({ text, anchor: pendingAnchor, sourceNodes: pendingTexts });
+      collected.push({ text, anchor: pendingAnchor, sourceNodes: pendingTextNodes });
     }
-    pendingTexts = [];
+    pendingTextNodes = [];
   };
 
   for (const node of walkElementsAndTexts(contentArea)) {
@@ -116,7 +116,7 @@ function collectTextWithin(contentArea: Element): SourceText[] {
     if (anchor !== pendingAnchor) finishPendingText();
 
     pendingAnchor = anchor;
-    pendingTexts.push(node);
+    pendingTextNodes.push(node);
   }
 
   finishPendingText();
