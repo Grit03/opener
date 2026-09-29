@@ -87,11 +87,16 @@ function findOutermostContentAreas(body: HTMLElement, tag: ContentAreaTag): HTML
   return [...body.querySelectorAll(tag)].filter((element) => !element.parentElement?.closest(tag));
 }
 
+/**
+ * 본문 영역 안의 텍스트 노드를 문서 순서대로 훑으며 글로 묶는다.
+ * 경계 요소가 시작되거나 기준 요소가 바뀌면, 그때까지 모은 텍스트 노드를 글 하나로 확정한다.
+ */
 function collectTextWithin(contentArea: Element): SourceText[] {
   const collected: SourceText[] = [];
   let pendingAnchor: Element = contentArea;
   let pendingTextNodes: Text[] = [];
 
+  /** 모은 텍스트 노드를 글 하나로 확정하고 비운다. 공백뿐이거나 한글이 있는 글은 결과에 넣지 않는다. */
   const finishPendingText = () => {
     const text = getTextforTranslation(pendingTextNodes);
     if (text !== null) {
@@ -102,6 +107,7 @@ function collectTextWithin(contentArea: Element): SourceText[] {
 
   for (const node of walkElementsAndTexts(contentArea)) {
     if (node instanceof Element) {
+      // 경계 요소가 시작되면 앞에서 모은 글을 확정한다.
       // 빈 경계 요소도 앞뒤 글을 나누므로 텍스트 노드의 기준 요소 변화만으로는 부족하다.
       if (isTextBoundary(node)) finishPendingText();
       continue;
@@ -111,8 +117,7 @@ function collectTextWithin(contentArea: Element): SourceText[] {
     if (!isTranslatableText(node)) continue;
 
     const anchor = findAnchor(node, contentArea);
-    // TreeWalker는 닫는 태그를 방문하지 않는다. 경계 요소 밖으로 돌아온 것은
-    // 기준 요소의 변화로 알아챈다. 예: li 안의 p 뒤에 이어지는 글.
+    // TreeWalker는 닫는 태그를 방문하지 않는다. 경계 요소 밖으로 돌아온 것은 기준 요소의 변화로 알아챈다. 예: li 안의 p 뒤에 이어지는 글.
     if (anchor !== pendingAnchor) finishPendingText();
 
     pendingAnchor = anchor;
@@ -136,6 +141,10 @@ function* walkElementsAndTexts(contentArea: Element): Generator<Element | Text> 
   }
 }
 
+/**
+ * 텍스트 노드의 기준 요소를 찾는다. 부모 방향으로 올라가며 경계 요소가 아닌 요소(a·em·span 등)는
+ * 지나치고, 처음 만나는 경계 요소를 반환한다. 본문 영역에 닿을 때까지 없으면 본문 영역을 반환한다.
+ */
 function findAnchor(text: Text, contentArea: Element): Element {
   let candidate = text.parentElement;
   while (candidate !== null && candidate !== contentArea && !isTextBoundary(candidate)) {
