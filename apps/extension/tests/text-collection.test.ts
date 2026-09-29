@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { mount } from "./helpers/mount";
-import { collectTextForTranslation } from "@/utils/text-collection";
+import { collectTextForTranslation, isSourceTextTranslatable } from "@/utils/text-collection";
 
 describe("본문 선택과 탐색", () => {
   // 본문 우선 선택 · 같은 위치의 중복 수집 방지
@@ -673,6 +673,38 @@ describe("화면에 보이지 않는 글 제외", () => {
     const result = collectTextForTranslation(document);
 
     expect(result.map(({ text }) => text)).toEqual(["Far below"]);
+  });
+});
+
+describe("수집 후 원문 유효성", () => {
+  it("원문 노드가 기준 요소 안에서 이동해도 번역할 수 있다", () => {
+    mount(`<main><p>Hello <span>world</span></p></main>`);
+    const [source] = collectTextForTranslation(document);
+    assert.isDefined(source);
+
+    document.querySelector("p")!.append(document.querySelector("span")!.firstChild!);
+
+    expect(isSourceTextTranslatable(source)).toBe(true);
+  });
+
+  it("원문 노드가 연결되어 있어도 기준 요소 밖으로 이동하면 번역하지 않는다", () => {
+    mount(`<main><p>Hello <span>world</span></p><aside></aside></main>`);
+    const [source] = collectTextForTranslation(document);
+    assert.isDefined(source);
+
+    document.querySelector("aside")!.append(document.querySelector("span")!);
+
+    expect(isSourceTextTranslatable(source)).toBe(false);
+  });
+
+  it("수집 후 원문의 translate 설정이 바뀌면 다시 확인한다", () => {
+    mount(`<main><p>Hello <span>world</span></p></main>`);
+    const [source] = collectTextForTranslation(document);
+    assert.isDefined(source);
+
+    document.querySelector("span")!.translate = false;
+
+    expect(isSourceTextTranslatable(source)).toBe(false);
   });
 });
 

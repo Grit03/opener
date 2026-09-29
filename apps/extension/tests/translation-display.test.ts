@@ -1,10 +1,42 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { mount } from "./helpers/mount";
 import { createTranslationDisplayController } from "@/utils/translation-display";
 
 const translationSelector = "opener-translation";
 
 describe("화면에 들어온 글의 번역 영역 표시", () => {
+  it("첫 콜백(callback) 실행 전에 껐다 켜도 새로 수집한 글을 한 번만 표시한다", async () => {
+    mount(`<main><p>Original paragraph</p></main>`);
+    const controller = createTranslationDisplayController(document);
+    onTestFinished(() => controller.destroy());
+
+    controller.disable();
+    document.querySelector("p")!.textContent = "Updated paragraph";
+    controller.enable();
+    controller.enable();
+
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll(translationSelector)).toHaveLength(1);
+      expect(document.querySelector(translationSelector)?.textContent).toBe("Updated paragraph");
+    });
+  });
+
+  it("번역 표시 기능을 종료하면 다시 켜도 번역이 나타나지 않는다", async () => {
+    mount(`<main><p>Visible paragraph</p></main>`);
+    const controller = createTranslationDisplayController(document);
+    onTestFinished(() => controller.destroy());
+    await vi.waitFor(() => expect(document.querySelectorAll(translationSelector)).toHaveLength(1));
+
+    controller.destroy();
+    controller.destroy();
+    controller.enable();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+
+    expect(document.querySelectorAll(translationSelector)).toHaveLength(0);
+  });
+
   it("문단 안에 표시하고 목록·표에서는 올바른 HTML 구조를 유지한다", async () => {
     mount(`
       <main>
