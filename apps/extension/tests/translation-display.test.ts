@@ -1,8 +1,24 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { mount } from "./helpers/mount";
 import { createTranslationDisplayController } from "@/utils/translation-display";
+import { collectTextForTranslation } from "@/utils/text-collection";
 
 const translationSelector = "opener-translation";
+
+const translations = () => [...document.querySelectorAll(translationSelector)];
+const displayedTexts = () => translations().map((element) => element.textContent);
+
+function startDisplay() {
+  const controller = createTranslationDisplayController(document);
+  onTestFinished(() => controller.destroy());
+  return controller;
+}
+
+async function nextFrames() {
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+}
 
 describe("화면에 들어온 글의 번역 영역 표시", () => {
   it("첫 콜백(callback) 실행 전에 껐다 켜도 새로 수집한 글을 한 번만 표시한다", async () => {
@@ -178,4 +194,148 @@ describe("화면에 들어온 글의 번역 영역 표시", () => {
 
     controller.destroy();
   });
+});
+
+describe("본문 변경에 따른 번역 표시", () => {
+  it("본문이 교체되면 이전 번역을 정리하고 새 본문을 표시한다", async () => {
+    mount("<main><p>First page</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First page"]));
+    const previousMain = document.querySelector("main")!;
+    previousMain.remove();
+    mount("<main><p>Second page</p></main>");
+
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Second page"]));
+    expect(previousMain.querySelector("opener-translation")).toBeNull();
+  });
+
+  it("늦게 추가된 본문을 수집하고 본문 영역의 우선순위를 다시 적용한다", async () => {
+    mount("<article><p>Fallback content</p></article>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Fallback content"]));
+
+    mount("<main><p>Loaded content</p></main>");
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Loaded content"]));
+
+    document.querySelector("main")!.remove();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Fallback content"]));
+  });
+
+  it("원문 노드를 재사용해 글을 바꾸면 오래된 번역을 교체한다", async () => {
+    mount("<main><p>Original text</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Original text"]));
+
+    document.querySelector("p")!.firstChild!.textContent = "Updated text";
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Updated text"]));
+  });
+
+  it("같은 기준 요소에 글이 추가되어도 기존 번역을 원문에 섞지 않는다", async () => {
+    mount("<main>First part</main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First part"]));
+    // 실제 확장 CSS처럼 번역 요소가 블록이어도 원문의 경계로 취급하지 않는다.
+    translations()[0]!.setAttribute("style", "display:block");
+
+    document.querySelector("main")!.append(" and second part");
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First part and second part"]));
+    expect(collectTextForTranslation().map((source) => source.text)).toEqual([
+      "First part and second part",
+    ]);
+  });
+
+  it("다른 글이 추가되어도 기존 번역 요소를 유지하고 자체 변경으로 중복하지 않는다", async () => {
+    mount("<main><p>Unchanged text</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Unchanged text"]));
+    const originalTranslation = translations()[0];
+
+    document.querySelector("main")!.insertAdjacentHTML("beforeend", "<p>Added text</p>");
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Unchanged text", "Added text"]));
+    await nextFrames();
+    expect(translations()[0]).toBe(originalTranslation);
+    expect(displayedTexts()).toEqual(["Unchanged text", "Added text"]);
+  });
+
+  it("원문이 같아도 페이지가 지운 번역은 다음 갱신에서 다시 표시한다", async () => {
+    mount("<main><p>Unchanged text</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Unchanged text"]));
+
+    translations()[0]!.remove();
+    document.querySelector("main")!.insertAdjacentHTML("beforeend", "<p>Added text</p>");
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Unchanged text", "Added text"]));
+  });
+
+  it("한 문단의 첫 글만 바뀌어도 번역은 원문 순서로 표시한다", async () => {
+    mount("<main><p>First line<br>Second line</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First line", "Second line"]));
+
+    document.querySelector("p")!.firstChild!.textContent = "Updated first line";
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Updated first line", "Second line"]));
+  });
+
+  it("기준 요소의 배치가 바뀌면 기존 번역의 배치도 갱신한다", async () => {
+    mount('<main><p style="display:inline">Same text</p></main>');
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Same text"]));
+    expect(translations()[0]!.className).toBe("opener-translation--inline");
+
+    document.querySelector("p")!.style.display = "block";
+    await vi.waitFor(() => expect(translations()[0]!.className).toBe("opener-translation--block"));
+    expect(displayedTexts()).toEqual(["Same text"]);
+  });
+
+  it.each([
+    ["hidden", ""],
+    ["translate", "no"],
+    ["lang", "ko"],
+  ])("%s 속성 변경에 따라 대상을 갱신한다", async (attribute, value) => {
+    mount("<main><p>Visible text</p></main>");
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Visible text"]));
+    const main = document.querySelector("main")!;
+
+    main.setAttribute(attribute, value);
+    await vi.waitFor(() => expect(displayedTexts()).toEqual([]));
+    main.removeAttribute(attribute);
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["Visible text"]));
+  });
+
+  it("화면 밖에 추가된 글은 스크롤로 화면에 들어올 때 표시한다", async () => {
+    mount('<main style="height:100px;overflow:auto"><p>First text</p></main>');
+    startDisplay();
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First text"]));
+    const main = document.querySelector("main")!;
+
+    main.insertAdjacentHTML("beforeend", '<div style="height:400px"></div><p>Later text</p>');
+    await nextFrames();
+    expect(displayedTexts()).toEqual(["First text"]);
+    main.scrollTop = main.scrollHeight;
+    await vi.waitFor(() => expect(displayedTexts()).toEqual(["First text", "Later text"]));
+  });
+
+  it.each(["disable", "destroy"] as const)(
+    "갱신 예약 후 %s하면 새 번역이 나타나지 않는다",
+    async (action) => {
+      mount("<main><p>First text</p></main>");
+      const controller = startDisplay();
+      await vi.waitFor(() => expect(displayedTexts()).toEqual(["First text"]));
+      document.querySelector("p")!.textContent = "Second text";
+      // MutationObserver가 갱신을 예약할 기회를 준다.
+      await Promise.resolve();
+
+      controller[action]();
+      await nextFrames();
+      expect(displayedTexts()).toEqual([]);
+      controller.enable();
+      if (action === "disable") {
+        await vi.waitFor(() => expect(displayedTexts()).toEqual(["Second text"]));
+      } else {
+        await nextFrames();
+        expect(displayedTexts()).toEqual([]);
+      }
+    },
+  );
 });
