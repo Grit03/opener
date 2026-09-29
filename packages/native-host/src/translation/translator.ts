@@ -9,10 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CliAdapterMap, Translator } from "./types.ts";
 
-export function parseTranslationResult(
-  value: unknown,
-  request: TranslateRequest,
-): TranslationResult {
+function parseTranslationResult(value: unknown, request: TranslateRequest): TranslationResult {
   if (!isNonArrayObject(value)) {
     throw new Error("Expected a translation result object.");
   }
