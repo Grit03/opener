@@ -22,6 +22,7 @@
 //   결과: "Intro"(기준 요소 main), "Hello world!"(기준 요소 p)
 
 import { type HtmlTagName, isBlock, type UppercaseHtmlTagName } from "./layout";
+import { isTranslationElement } from "./translation-element";
 import { getTextforTranslation, isTranslatableText } from "./translation-target";
 
 /** 같은 기준 요소 안에서 경계 요소를 사이에 두지 않는 텍스트 노드들을 묶은 글. */
@@ -133,6 +134,11 @@ function* walkElementsAndTexts(contentArea: Element): Generator<Element | Text> 
   const walker = contentArea.ownerDocument.createTreeWalker(
     contentArea,
     NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      // 번역 표시 영역은 원문도, 글을 나누는 경계도 아니다. 자손까지 탐색에서 제외한다.
+      acceptNode: (node) =>
+        isTranslationElement(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    },
   );
 
   while (walker.nextNode() !== null) {

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Opener SPA E2E</title>
+  </head>
+  <body>
+    <nav>
+      <a href="?page=second" id="next">Next page</a>
+      <button id="load">Load content</button>
+      <button id="update">Update content</button>
+    </nav>
+    <main><p>First page content</p></main>
+    <script>
+      function renderPage() {
+        const main = document.createElement("main");
+        const paragraph = document.createElement("p");
+        paragraph.textContent = location.search ? "Second page content" : "First page content";
+        main.append(paragraph);
+        document.querySelector("main").replaceWith(main);
+      }
+
+      document.querySelector("#next").addEventListener("click", (event) => {
+        event.preventDefault();
+        history.pushState(null, "", "?page=second");
+        renderPage();
+      });
+      window.addEventListener("popstate", renderPage);
+      document.querySelector("#load").addEventListener("click", () => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = "Loaded later";
+        document.querySelector("main").append(paragraph);
+      });
+      document.querySelector("#update").addEventListener("click", () => {
+        document.querySelector("main p").firstChild.textContent = "Updated page content";
+      });
+    </script>
+  </body>
+</html>
