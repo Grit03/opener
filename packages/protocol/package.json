@@ -2,7 +2,7 @@
   "name": "@opener/protocol",
   "description": "Shared native messaging protocol for Opener",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "exports": "./src/index.ts"
 }

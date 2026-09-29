@@ -1,5 +1,5 @@
 {
-  "apps/extension": "0.0.0",
-  "packages/native-host": "0.0.0",
-  "packages/protocol": "0.0.0"
+  "apps/extension": "0.1.0",
+  "packages/native-host": "0.1.0",
+  "packages/protocol": "0.1.0"
 }
