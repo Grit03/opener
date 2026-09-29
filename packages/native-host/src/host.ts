@@ -1,5 +1,5 @@
 import type { Readable, Writable } from "node:stream";
-import { readNativeMessages, ResponseError, writeNativeMessage } from "./native-messaging.ts";
+import { readNativeMessages, ResponseError, writeNativeMessage } from "./utils/native-messaging.ts";
 import {
   isValidNativeHostRequest,
   type NativeHostRequest,

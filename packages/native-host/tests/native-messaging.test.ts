@@ -5,7 +5,7 @@ import {
   encodeNativeMessage,
   MAX_MESSAGE_BYTES,
   readNativeMessages,
-} from "../src/native-messaging.ts";
+} from "../src/utils/native-messaging.ts";
 
 function frameHeader(length: number): Buffer {
   const header = Buffer.alloc(4);

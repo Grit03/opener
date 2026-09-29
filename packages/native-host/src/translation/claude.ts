@@ -1,7 +1,7 @@
 import { isNonArrayObject } from "@opener/protocol";
 import { readFileSync } from "node:fs";
-import { runCli } from "./run-cli.ts";
-import type { CliAdapter } from "./translate.ts";
+import { runCli } from "../utils/run-cli.ts";
+import type { CliAdapter } from "./types.ts";
 
 const resultSchema = readFileSync(
   new URL("./translation-result.schema.json", import.meta.url),
