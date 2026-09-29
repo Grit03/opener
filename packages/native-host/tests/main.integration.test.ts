@@ -4,9 +4,16 @@ import { chmod, copyFile, mkdtemp, rm } from "node:fs/promises";
 import { createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, onTestFinished, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 import { encodeNativeMessage, readNativeMessages } from "../src/utils/native-messaging.ts";
 import { createRequest, createResult } from "./fixtures.ts";
+
+describe("번역 요청 내용 검증", () => {
+  test.todo("provider, targetLanguage, segments가 누락된 요청을 거부한다");
+  test.todo("지원하지 않는 provider를 거부한다");
+  test.todo("빈 segments를 거부한다");
+  test.todo("중복된 세그먼트 ID를 거부한다");
+});
 
 test.skipIf(process.platform === "win32").each([
   { outcome: "success", description: "성공" },

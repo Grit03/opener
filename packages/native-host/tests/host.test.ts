@@ -29,14 +29,20 @@ function startHost(handler: (request: TranslateRequest) => Promise<NativeHostRes
   return { input, responses };
 }
 
-test("지원하지 않는 요청 타입에 오류를 응답하고 다음 요청을 처리한다", async () => {
+test.each([
+  { reason: "null", request: null },
+  { reason: "문자열", request: "translate.request" },
+  { reason: "type 필드가 없는", request: {} },
+  { reason: "지원하지 않는 타입의", request: { type: "unknown.request" } },
+  { reason: "핸들러가 등록되지 않은 ping", request: { type: "ping" } },
+])("$reason 요청에 오류를 응답하고 다음 요청을 처리한다", async ({ request }) => {
   let handled = 0;
   const { input, responses } = startHost(async () => {
     handled += 1;
     return { type: "translate.result", ...createResult() };
   });
 
-  input.write(encodeNativeMessage({ ...createRequest(), type: "unknown.request" }));
+  input.write(encodeNativeMessage(request));
   const invalid = await responses.next();
   expect(handled).toBe(0);
   input.write(encodeNativeMessage(createRequest()));
